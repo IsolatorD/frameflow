@@ -12,6 +12,8 @@ import { useProjects } from "../../hooks/useProjects/useProjects";
 import { projectsNavGroup } from "../../utils/navigation/navigation";
 import { projectPath } from "../../utils/router/router";
 import { BrandSection } from "./BrandSection/BrandSection";
+import { GenerateSection } from "./GenerateSection/GenerateSection";
+import { LibrarySection } from "./LibrarySection/LibrarySection";
 import {
 	brandSummaryProps,
 	findSection,
@@ -78,6 +80,10 @@ export function ProjectPage() {
 				<EmptyState title="Esta sección llega pronto" description={section.upcoming} />
 			) : section.id === "brand" ? (
 				<BrandSection key={data.id} project={data} />
+			) : section.id === "generate" ? (
+				<GenerateSection key={data.id} project={data} />
+			) : section.id === "library" ? (
+				<LibrarySection projectId={data.id} />
 			) : (
 				<div className="flex flex-col gap-5">
 					<div className="grid grid-cols-4 gap-3">
@@ -88,16 +94,16 @@ export function ProjectPage() {
 					</div>
 
 					<div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-5">
-						<Section title="Videos recientes" description="Lo último que generaste para el canal.">
-							<EmptyState
-								title="Todavía no hay videos"
-								description="Genera el primer video del canal: un tema basta para empezar."
-								action={
-									<Button variant="secondary" onClick={() => goTo("generate")}>
-										Generar el primero
-									</Button>
-								}
-							/>
+						<Section
+							title="Videos recientes"
+							description="Lo último que generaste para el canal."
+							action={
+								<Button variant="ghost" onClick={() => goTo("library")}>
+									Ver todos
+								</Button>
+							}
+						>
+							<LibrarySection projectId={data.id} limit={4} />
 						</Section>
 
 						<Section

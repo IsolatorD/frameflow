@@ -7,3 +7,4 @@ prototype/public/voice
 prototype/tts/.venv
 __pycache__
 test-results
+.venv

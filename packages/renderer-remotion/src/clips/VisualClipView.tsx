@@ -3,7 +3,7 @@ import { AbsoluteFill, Img, OffthreadVideo, useVideoConfig } from "remotion";
 import { KineticText } from "../scenes/KineticText";
 import { Stat } from "../scenes/Stat";
 import { ClipLayer } from "./ClipLayer";
-import { resolveSrc } from "./resolveSrc";
+import { useResolveSrc } from "./resolveSrc";
 
 /** Un color de estilo puede ser el nombre de un color del tema ("accent") o un #RRGGBB. */
 const themeColor = (value: string, theme: Theme) =>
@@ -12,6 +12,7 @@ const themeColor = (value: string, theme: Theme) =>
 // Registro tipo de clip → componente. Añadir un tipo nuevo = añadir un caso.
 const Content = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => {
 	const { fps } = useVideoConfig();
+	const resolveSrc = useResolveSrc();
 	switch (clip.type) {
 		case "scene": {
 			const sceneTheme = { ...theme, ...clip.theme };

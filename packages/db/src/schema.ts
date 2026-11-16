@@ -2,6 +2,7 @@
 // Convenciones: ids UUID (texto), fechas ISO-8601 (texto), JSON en columnas de texto.
 import type { BrandKit, Language } from "@frameflow/core/project";
 import type { Storyboard, VideoFormat } from "@frameflow/core/storyboard";
+import type { VideoStatus } from "@frameflow/core/video";
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
@@ -78,15 +79,6 @@ export const ideas = sqliteTable(
 	(t) => [index("ideas_project_idx").on(t.projectId)],
 );
 
-export type VideoStatus =
-	| "draft"
-	| "scripting"
-	| "ready_to_render"
-	| "rendering"
-	| "ready"
-	| "published"
-	| "archived";
-
 export const videos = sqliteTable(
 	"videos",
 	{
@@ -98,6 +90,8 @@ export const videos = sqliteTable(
 		topic: text("topic").notNull(),
 		mode: text("mode").$type<"auto" | "stepwise">().notNull(),
 		status: text("status").$type<VideoStatus>().notNull().default("draft"),
+		/** Último error del flujo (guion, voz o render); null si fue bien. */
+		error: text("error"),
 		createdAt: createdAt(),
 		updatedAt: createdAt(),
 	},
@@ -128,7 +122,7 @@ export const storyboardVersions = sqliteTable(
 			.references(() => variants.id, { onDelete: "cascade" }),
 		number: integer("number").notNull(),
 		storyboard: json<Storyboard>("storyboard").notNull(),
-		source: text("source").$type<"ai" | "editor" | "translation">().notNull(),
+		source: text("source").$type<"ai" | "manual" | "voice" | "editor" | "translation">().notNull(),
 		parentId: text("parent_id"),
 		createdAt: createdAt(),
 	},

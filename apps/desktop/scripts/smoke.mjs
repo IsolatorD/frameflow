@@ -106,6 +106,49 @@ try {
 	const tags = await page.getByLabel("Hashtags por defecto").inputValue();
 	expect(tags === "#astronomía #espacio", `Hashtags guardados inesperados: "${tags}"`);
 
+	// Generar video (paso a paso): crear, editar el guion, guardar y ver la vista previa.
+	await page
+		.getByRole("button", { name: /^Generar video/ })
+		.first()
+		.click();
+	await page.getByLabel("¿De qué trata el video?").fill("Por qué el cielo es azul");
+	await page.getByText("Paso a paso", { exact: true }).click();
+	await page.screenshot({ path: join(shots, "9-nuevo-video.png") });
+	await page.getByRole("button", { name: "Crear video" }).click();
+	await page.getByRole("heading", { level: 1, name: "Por qué el cielo es azul" }).waitFor();
+	await page.getByRole("button", { name: "Generar voz" }).waitFor();
+
+	const narration2 = page.getByLabel("Narración").nth(1);
+	await narration2.fill("La luz del Sol se dispersa en el aire, y el azul se dispersa mucho más.");
+	await page.getByLabel("Explicación").fill("más dispersión del azul");
+	expect(
+		await page.getByRole("button", { name: "Generar voz" }).isDisabled(),
+		"Sin guardar no debería poder generar voz",
+	);
+	await page.getByRole("button", { name: "Guardar guion" }).click();
+	await page.getByText(/versión 2/).waitFor();
+	expect(
+		!(await page.getByRole("button", { name: "Generar voz" }).isDisabled()),
+		"Tras guardar debería poder generar voz",
+	);
+	await page.waitForTimeout(800); // deja pintar el primer fotograma de la vista previa
+	await page.screenshot({ path: join(shots, "10-video-guion.png") });
+
+	// Prueba completa (voz real con Kokoro + render MP4): solo con SMOKE_FULL=1, tarda minutos.
+	if (process.env.SMOKE_FULL) {
+		await page.getByRole("button", { name: "Generar voz" }).click();
+		await page.getByRole("button", { name: "Regenerar voz" }).waitFor({ timeout: 600_000 });
+		await page.screenshot({ path: join(shots, "11-video-con-voz.png") });
+		await page.getByRole("button", { name: "Crear video (MP4)" }).click();
+		await page.getByRole("button", { name: "Ver video" }).waitFor({ timeout: 600_000 });
+		await page.screenshot({ path: join(shots, "12-video-listo.png") });
+	}
+
+	// La biblioteca lista el video.
+	await page.getByRole("button", { name: "Biblioteca", exact: true }).click();
+	await page.getByRole("button", { name: /Por qué el cielo es azul/ }).waitFor();
+	await page.screenshot({ path: join(shots, "13-biblioteca.png") });
+
 	// Volver al listado desde la barra lateral.
 	await page.getByRole("button", { name: "Todos los proyectos" }).click();
 	await page.getByRole("heading", { level: 1, name: "Proyectos" }).waitFor();
@@ -115,5 +158,7 @@ try {
 	console.log(`OK: proyecto creado y panel navegable. Capturas en ${shots}`);
 } finally {
 	await app.close();
-	rmSync(home, { recursive: true, force: true });
+	// SMOKE_KEEP=1 conserva la carpeta de datos (BD, voces, MP4) para inspeccionarla.
+	if (process.env.SMOKE_KEEP) console.log(`Datos conservados en ${home}`);
+	else rmSync(home, { recursive: true, force: true });
 }

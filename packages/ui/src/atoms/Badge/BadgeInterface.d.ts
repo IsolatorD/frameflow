@@ -1,0 +1,8 @@
+import type { ReactNode } from "react";
+
+export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
+
+export interface BadgeProps {
+	tone?: BadgeTone;
+	children: ReactNode;
+}

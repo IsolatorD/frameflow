@@ -1,0 +1,9 @@
+[project]
+name = "frameflow-tts"
+version = "0.1.0"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "faster-whisper>=1.2.1",
+    "kokoro>=0.9.4",
+    "soundfile>=0.14.0",
+]

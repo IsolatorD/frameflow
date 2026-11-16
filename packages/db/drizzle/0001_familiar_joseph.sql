@@ -1,0 +1,1 @@
+ALTER TABLE `videos` ADD `error` text;

@@ -9,7 +9,10 @@
 		"./project": "./src/project/project.ts",
 		"./catalog": "./src/catalog/catalog.ts",
 		"./storyboard/timeline": "./src/storyboard/timeline.ts",
-		"./storyboard/v1": "./src/storyboard/v1.ts"
+		"./storyboard/v1": "./src/storyboard/v1.ts",
+		"./script": "./src/script/script.ts",
+		"./script/ai": "./src/script/ai.ts",
+		"./video": "./src/video/video.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

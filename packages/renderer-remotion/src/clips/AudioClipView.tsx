@@ -1,10 +1,11 @@
 import type { AudioClip } from "@frameflow/core/storyboard";
 import { Audio, interpolate, useVideoConfig } from "remotion";
-import { resolveSrc } from "./resolveSrc";
+import { useResolveSrc } from "./resolveSrc";
 
 /** Audio con recorte, volumen y fundidos de entrada/salida. */
 export const AudioClipView = ({ clip }: { clip: AudioClip }) => {
 	const { fps, durationInFrames } = useVideoConfig();
+	const resolveSrc = useResolveSrc();
 	const fadeIn = clip.fadeIn * fps;
 	const fadeOut = clip.fadeOut * fps;
 	return (

@@ -14,13 +14,18 @@
 	"dependencies": {
 		"@frameflow/core": "workspace:*",
 		"@frameflow/db": "workspace:*",
+		"@frameflow/renderer-remotion": "workspace:*",
 		"@frameflow/ui": "workspace:*",
 		"@libsql/client": "~0.18.0",
+		"@remotion/bundler": "4.0.543",
+		"@remotion/player": "4.0.543",
+		"@remotion/renderer": "4.0.543",
 		"@tanstack/react-query": "^5.107.1",
 		"drizzle-orm": "~0.45.4",
 		"react": "^19.3.1",
 		"react-dom": "^19.3.1",
 		"react-router": "^7.18.5",
+		"remotion": "4.0.543",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {

@@ -21,18 +21,8 @@ export type SectionInfo = {
 
 export const SECTIONS: readonly SectionInfo[] = [
 	{ id: "overview", label: "Panel" },
-	{
-		id: "generate",
-		label: "Generar video",
-		upcoming:
-			"Escribe un tema (o elige uno del banco de ideas) y Frameflow crea el guion, la voz, los subtítulos y el video con la marca del canal.",
-	},
-	{
-		id: "library",
-		label: "Biblioteca",
-		upcoming:
-			"Todos los videos del canal con sus versiones por idioma y formato, listos para editar o exportar.",
-	},
+	{ id: "generate", label: "Generar video" },
+	{ id: "library", label: "Biblioteca" },
 	{
 		id: "calendar",
 		label: "Calendario",

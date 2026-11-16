@@ -6,7 +6,8 @@
 	"exports": {
 		"./client": "./src/client.ts",
 		"./schema": "./src/schema.ts",
-		"./projects": "./src/repositories/projectsRepository.ts"
+		"./projects": "./src/repositories/projectsRepository.ts",
+		"./videos": "./src/repositories/videosRepository.ts"
 	},
 	"scripts": {
 		"generate": "drizzle-kit generate",

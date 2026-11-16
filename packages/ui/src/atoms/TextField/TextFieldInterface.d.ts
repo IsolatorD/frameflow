@@ -9,4 +9,6 @@ export interface TextFieldProps {
 	multiline?: boolean;
 	maxLength?: number;
 	autoFocus?: boolean;
+	type?: "text" | "number";
+	disabled?: boolean;
 }

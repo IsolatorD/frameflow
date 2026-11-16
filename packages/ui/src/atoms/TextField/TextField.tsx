@@ -14,6 +14,8 @@ export function TextField({
 	multiline = false,
 	maxLength,
 	autoFocus,
+	type = "text",
+	disabled = false,
 }: TextFieldProps) {
 	const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
 	const common = {
@@ -22,6 +24,7 @@ export function TextField({
 		placeholder,
 		maxLength,
 		autoFocus,
+		disabled,
 		"aria-invalid": Boolean(error),
 		"aria-describedby": describedBy,
 	};
@@ -35,11 +38,16 @@ export function TextField({
 				<textarea
 					{...common}
 					rows={3}
-					className={`${FIELD} resize-none py-2`}
+					className={`${FIELD} resize-none py-2 disabled:opacity-60`}
 					onChange={(e) => onChange(e.target.value)}
 				/>
 			) : (
-				<input {...common} className={`${FIELD} h-9`} onChange={(e) => onChange(e.target.value)} />
+				<input
+					{...common}
+					type={type}
+					className={`${FIELD} h-9 disabled:opacity-60`}
+					onChange={(e) => onChange(e.target.value)}
+				/>
 			)}
 			{error ? (
 				<p id={`${id}-error`} className="text-xs text-red-400">
