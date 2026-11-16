@@ -1,0 +1,158 @@
+{
+	"version": 2,
+	"title": "La luz del Sol",
+	"language": "es",
+	"format": "9:16",
+	"fps": 30,
+	"style": {
+		"theme": {
+			"background": "#04342C",
+			"text": "#FFFFFF",
+			"accent": "#5DCAA5",
+			"muted": "#9FE1CB"
+		},
+		"fontFamily": "Poppins",
+		"captions": {
+			"enabled": true,
+			"maxWordsPerPage": 4
+		}
+	},
+	"tracks": [
+		{
+			"kind": "visual",
+			"id": "track-scenes",
+			"name": "Escenas",
+			"clips": [
+				{
+					"type": "scene",
+					"id": "scene-1",
+					"start": 0,
+					"duration": 3,
+					"narration": "¿Sabías que la luz que ves del Sol no es la de este momento?",
+					"content": {
+						"type": "kinetic-text",
+						"lines": [
+							{
+								"text": "¿Sabías que"
+							},
+							{
+								"text": "la luz que ves"
+							},
+							{
+								"text": "del Sol...",
+								"emphasis": true
+							}
+						]
+					},
+					"exit": {
+						"type": "fade",
+						"duration": 0.4
+					}
+				},
+				{
+					"type": "scene",
+					"id": "scene-2",
+					"start": 3,
+					"duration": 3,
+					"narration": "Tarda unos ocho minutos en llegar a la Tierra.",
+					"content": {
+						"type": "stat",
+						"value": 8,
+						"suffix": " min",
+						"label": "tarda en llegar a la Tierra"
+					},
+					"theme": {
+						"accent": "#FAC775"
+					},
+					"enter": {
+						"type": "pop",
+						"duration": 0.5
+					},
+					"exit": {
+						"type": "fade",
+						"duration": 0.4
+					}
+				},
+				{
+					"type": "scene",
+					"id": "scene-3",
+					"start": 6,
+					"duration": 3.5,
+					"narration": "Así que, cada vez que miras al cielo, estás viendo el pasado.",
+					"content": {
+						"type": "kinetic-text",
+						"lines": [
+							{
+								"text": "Estás viendo"
+							},
+							{
+								"text": "el pasado",
+								"emphasis": true
+							},
+							{
+								"text": "cada vez que miras al cielo"
+							}
+						]
+					},
+					"enter": {
+						"type": "slide-up",
+						"duration": 0.5
+					}
+				}
+			]
+		},
+		{
+			"kind": "visual",
+			"id": "track-overlays",
+			"name": "Textos",
+			"clips": [
+				{
+					"type": "text",
+					"id": "brand",
+					"start": 0,
+					"duration": 9.5,
+					"text": "ASTROINFO",
+					"transform": {
+						"y": 0.07,
+						"scale": 0.6
+					},
+					"style": {
+						"color": "muted",
+						"fontSize": 64,
+						"fontWeight": 800
+					},
+					"enter": {
+						"type": "fade",
+						"duration": 0.6
+					}
+				}
+			]
+		},
+		{
+			"kind": "visual",
+			"id": "track-cta",
+			"name": "Llamada a la acción",
+			"clips": [
+				{
+					"type": "text",
+					"id": "cta",
+					"start": 7.5,
+					"duration": 2,
+					"text": "Síguenos para más",
+					"transform": {
+						"y": 0.85
+					},
+					"style": {
+						"color": "background",
+						"background": "accent",
+						"fontSize": 56
+					},
+					"enter": {
+						"type": "pop",
+						"duration": 0.4
+					}
+				}
+			]
+		}
+	]
+}

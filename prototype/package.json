@@ -1,0 +1,29 @@
+{
+	"name": "frameflow-prototype",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"ai": "tsx generator/generate.ts",
+		"voice": "cd tts && uv run generate.py ../src/storyboard/demo.json ../out/props.json",
+		"studio": "remotion studio",
+		"studio:voice": "remotion studio --props=out/props.json",
+		"render": "remotion render Storyboard out/demo.mp4",
+		"render:voice": "pnpm voice && remotion render Storyboard out/demo-voz.mp4 --props=out/props.json",
+		"still": "remotion still Storyboard out/frame.png --frame=60",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@remotion/cli": "4.0.543",
+		"@remotion/google-fonts": "4.0.543",
+		"react": "19.2.0",
+		"react-dom": "19.2.0",
+		"remotion": "4.0.543",
+		"zod": "3.25.76"
+	},
+	"devDependencies": {
+		"@types/node": "^24.19.2",
+		"@types/react": "19.2.0",
+		"tsx": "^4.23.15",
+		"typescript": "5.9.3"
+	}
+}

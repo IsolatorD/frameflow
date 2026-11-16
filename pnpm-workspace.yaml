@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Paquetes con scripts de instalación permitidos (binarios nativos).
+onlyBuiltDependencies:
+  - electron
+  - esbuild

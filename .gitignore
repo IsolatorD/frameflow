@@ -1,0 +1,9 @@
+node_modules
+out
+dist
+.DS_Store
+*.log
+prototype/public/voice
+prototype/tts/.venv
+__pycache__
+test-results

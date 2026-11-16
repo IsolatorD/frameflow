@@ -1,0 +1,21 @@
+{
+	"name": "@frameflow/core",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./storyboard": "./src/storyboard/schema.ts",
+		"./presets": "./src/presets/presets.ts",
+		"./project": "./src/project/project.ts",
+		"./catalog": "./src/catalog/catalog.ts",
+		"./storyboard/timeline": "./src/storyboard/timeline.ts",
+		"./storyboard/v1": "./src/storyboard/v1.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"zod": "^4.6.7"
+	}
+}

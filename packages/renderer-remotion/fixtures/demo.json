@@ -1,0 +1,43 @@
+{
+	"title": "La luz del Sol",
+	"language": "es",
+	"format": "9:16",
+	"fps": 30,
+	"voice": { "voiceId": "ef_dora", "speed": 1.0 },
+	"theme": {
+		"background": "#26215C",
+		"text": "#FFFFFF",
+		"accent": "#FAC775",
+		"muted": "#CECBF6"
+	},
+	"scenes": [
+		{
+			"type": "kinetic-text",
+			"durationInSeconds": 3,
+			"narration": "¿Sabías que la luz que ves del Sol no es la de este momento?",
+			"lines": [
+				{ "text": "¿Sabías que" },
+				{ "text": "la luz que ves" },
+				{ "text": "del Sol...", "emphasis": true }
+			]
+		},
+		{
+			"type": "stat",
+			"durationInSeconds": 3,
+			"narration": "Viaja ciento cincuenta millones de kilómetros, y tarda unos ocho minutos en llegar a la Tierra.",
+			"value": 8,
+			"suffix": " min",
+			"label": "tarda en llegar a la Tierra"
+		},
+		{
+			"type": "kinetic-text",
+			"durationInSeconds": 3.5,
+			"narration": "Así que, cada vez que miras al cielo, estás viendo el pasado.",
+			"lines": [
+				{ "text": "Estás viendo" },
+				{ "text": "el pasado", "emphasis": true },
+				{ "text": "cada vez que miras al cielo" }
+			]
+		}
+	]
+}

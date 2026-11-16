@@ -1,0 +1,37 @@
+{
+	"name": "@frameflow/desktop",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"main": "out/main/index.js",
+	"scripts": {
+		"dev": "electron-vite dev",
+		"build": "electron-vite build",
+		"preview": "electron-vite preview",
+		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+		"smoke": "electron-vite build && node scripts/smoke.mjs"
+	},
+	"dependencies": {
+		"@frameflow/core": "workspace:*",
+		"@frameflow/db": "workspace:*",
+		"@frameflow/ui": "workspace:*",
+		"@libsql/client": "~0.18.0",
+		"@tanstack/react-query": "^5.107.1",
+		"drizzle-orm": "~0.45.4",
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1",
+		"react-router": "^7.18.5",
+		"zod": "^4.6.7"
+	},
+	"devDependencies": {
+		"@tailwindcss/vite": "^4.3.5",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"@vitejs/plugin-react": "^6.3.0",
+		"electron": "^45.3.3",
+		"electron-vite": "^6.0.0",
+		"playwright-core": "^1.65.1",
+		"tailwindcss": "^4.3.5",
+		"vite": "^8.3.8"
+	}
+}

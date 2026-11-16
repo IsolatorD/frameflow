@@ -1,0 +1,24 @@
+{
+	"name": "@frameflow/db",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./client": "./src/client.ts",
+		"./schema": "./src/schema.ts",
+		"./projects": "./src/repositories/projectsRepository.ts"
+	},
+	"scripts": {
+		"generate": "drizzle-kit generate",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@frameflow/core": "workspace:*",
+		"@libsql/client": "~0.18.0",
+		"drizzle-orm": "~0.45.4"
+	},
+	"devDependencies": {
+		"drizzle-kit": "~0.31.11"
+	}
+}

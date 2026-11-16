@@ -1,0 +1,53 @@
+import type { Storyboard as StoryboardData } from "@frameflow/core/storyboard";
+import { captionWords, toFrames } from "@frameflow/core/storyboard/timeline";
+import { AbsoluteFill, Sequence } from "remotion";
+import { Captions } from "./captions/Captions";
+import { AudioClipView } from "./clips/AudioClipView";
+import { VisualClipView } from "./clips/VisualClipView";
+import { fontFor } from "./fonts";
+
+/**
+ * Dibuja la línea de tiempo: cada pista es una capa (la última, encima) y cada clip
+ * un <Sequence> en su posición. Los subtítulos van siempre por encima de todo.
+ */
+export const Storyboard = ({ storyboard }: { storyboard: StoryboardData }) => {
+	const { fps, style } = storyboard;
+	const at = (clip: { id: string; start: number; duration: number }) => ({
+		from: toFrames(clip.start, fps),
+		durationInFrames: Math.max(1, toFrames(clip.duration, fps)),
+		name: clip.id,
+	});
+
+	return (
+		<AbsoluteFill
+			style={{ fontFamily: fontFor(style.fontFamily), backgroundColor: style.theme.background }}
+		>
+			{storyboard.tracks.map((track) =>
+				track.hidden ? null : (
+					<AbsoluteFill key={track.id}>
+						{track.kind === "visual"
+							? track.clips.map((clip) => (
+									<Sequence key={clip.id} {...at(clip)} layout="none">
+										<VisualClipView clip={clip} theme={style.theme} />
+									</Sequence>
+								))
+							: track.muted
+								? null
+								: track.clips.map((clip) => (
+										<Sequence key={clip.id} {...at(clip)} layout="none">
+											<AudioClipView clip={clip} />
+										</Sequence>
+									))}
+					</AbsoluteFill>
+				),
+			)}
+			{style.captions.enabled ? (
+				<Captions
+					words={captionWords(storyboard)}
+					maxWordsPerPage={style.captions.maxWordsPerPage}
+					theme={style.theme}
+				/>
+			) : null}
+		</AbsoluteFill>
+	);
+};
