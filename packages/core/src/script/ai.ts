@@ -1,14 +1,22 @@
 import { z } from "zod";
+import { isCopiedLine, REPEAT_THRESHOLD, similarity } from "./quality";
 import { type Script, sceneRange, scriptSchema, WORDS_PER_SECOND } from "./script";
 
 // Generación del guion con un LLM. El proveedor es intercambiable (Ollama hoy; Claude/OpenAI mañana).
 
 export type LlmMessage = { role: "system" | "user" | "assistant"; content: string };
 
+export type LlmOptions = {
+	signal?: AbortSignal;
+	/** Razonar antes de responder (modelos que lo admiten, como Qwen3). Más lento. */
+	think?: boolean;
+	temperature?: number;
+};
+
 export interface LlmProvider {
 	readonly name: string;
 	/** Devuelve texto JSON que cumple `jsonSchema`. */
-	generateJson(messages: LlmMessage[], jsonSchema: object, signal?: AbortSignal): Promise<string>;
+	generateJson(messages: LlmMessage[], jsonSchema: object, options?: LlmOptions): Promise<string>;
 }
 
 export type LlmStatus =
@@ -38,7 +46,7 @@ export const LIMITS = { line: 30, lines: 3, title: 60, suffix: 8, label: 40 } as
 /** Margen aceptado sobre la duración pedida (la IA no cuenta palabras con precisión). */
 export const DURATION_TOLERANCE = { min: 0.75, max: 1.35 } as const;
 
-const llmOutput = (range: [number, number], seconds: number) =>
+const llmOutput = (range: [number, number]) =>
 	z
 		.object({
 			title: z.string().min(1),
@@ -51,17 +59,6 @@ const llmOutput = (range: [number, number], seconds: number) =>
 				issue(`Escena ${i + 1}: ${message}`, ["scenes", i]);
 			if (out.title.length > LIMITS.title)
 				issue(`El título es demasiado largo (máx. ${LIMITS.title} caracteres).`, ["title"]);
-
-			const words = out.scenes.reduce((t, s) => t + s.narration.trim().split(/\s+/).length, 0);
-			const estimated = Math.round(words / WORDS_PER_SECOND);
-			if (estimated < seconds * DURATION_TOLERANCE.min)
-				issue(
-					`El guion dura unos ${estimated} s y el objetivo son ${seconds} s (unas ${Math.round(seconds * WORDS_PER_SECOND)} palabras de narración en total). Alarga las narraciones con información nueva, sin repetir datos.`,
-				);
-			if (estimated > seconds * DURATION_TOLERANCE.max)
-				issue(
-					`El guion dura unos ${estimated} s y el objetivo son ${seconds} s. Acorta las narraciones.`,
-				);
 
 			out.scenes.forEach((scene, i) => {
 				if (scene.lines.length > LIMITS.lines) problem(i, `como mucho ${LIMITS.lines} líneas.`);
@@ -96,6 +93,44 @@ const llmOutput = (range: [number, number], seconds: number) =>
 					path: ["scenes"],
 				});
 		});
+
+type LlmScript = z.infer<ReturnType<typeof llmOutput>>;
+
+/**
+ * Mejoras deseables (no bloquean): duración, líneas copiadas de la narración e ideas repetidas.
+ * Se piden una vez; si el modelo no lo consigue, se usa el mejor intento válido.
+ * Hacerlas obligatorias hundía la fiabilidad (evaluación en docs/04-guion-ia.md).
+ */
+export const softProblems = (out: LlmScript, seconds: number): string[] => {
+	const problems: string[] = [];
+	const words = out.scenes.reduce((t, s) => t + s.narration.trim().split(/\s+/).length, 0);
+	const estimated = Math.round(words / WORDS_PER_SECOND);
+	if (estimated < seconds * DURATION_TOLERANCE.min)
+		problems.push(
+			`El guion dura unos ${estimated} s y el objetivo son ${seconds} s (unas ${Math.round(seconds * WORDS_PER_SECOND)} palabras de narración en total). Alarga las narraciones con información nueva, sin repetir datos.`,
+		);
+	if (estimated > seconds * DURATION_TOLERANCE.max)
+		problems.push(
+			`El guion dura unos ${estimated} s y el objetivo son ${seconds} s. Acorta las narraciones.`,
+		);
+	out.scenes.forEach((scene, i) => {
+		if (scene.visual !== "texto") return;
+		const copied = scene.lines.find((l) => isCopiedLine(l.text, scene.narration));
+		if (copied)
+			problems.push(
+				`Escena ${i + 1}: la línea "${copied.text}" copia la narración; resume la idea con otras palabras (2 a 4).`,
+			);
+	});
+	out.scenes.forEach((a, i) => {
+		out.scenes.slice(i + 1).forEach((b, k) => {
+			if (similarity(a.narration, b.narration) >= REPEAT_THRESHOLD)
+				problems.push(
+					`Escena ${i + 2 + k}: repite la idea de la escena ${i + 1}; cámbiala por un dato o una idea nueva.`,
+				);
+		});
+	});
+	return problems;
+};
 
 /** Ejemplo de respuesta (otro tema) para que el modelo vea la forma esperada. */
 const EXAMPLE = JSON.stringify({
@@ -163,64 +198,200 @@ Responde solo con el JSON pedido.`;
 
 export const MAX_ATTEMPTS = 3;
 
+const fromLlm = (out: LlmScript): Script =>
+	scriptSchema.parse({
+		title: out.title,
+		scenes: out.scenes.map((scene) =>
+			scene.visual === "cifra"
+				? {
+						narration: scene.narration,
+						content: {
+							type: "stat",
+							value: scene.value,
+							suffix: scene.suffix || undefined,
+							label: scene.label,
+						},
+					}
+				: {
+						narration: scene.narration,
+						content: {
+							type: "kinetic-text",
+							lines: scene.lines
+								.filter((l) => l.text.trim())
+								.map((l) => (l.emphasis ? l : { text: l.text })),
+						},
+					},
+		),
+	});
+
+const toLlm = (script: Script) => ({
+	title: script.title,
+	scenes: script.scenes.map((scene) =>
+		scene.content.type === "stat"
+			? {
+					narration: scene.narration,
+					visual: "cifra",
+					lines: [],
+					value: scene.content.value,
+					suffix: scene.content.suffix ?? "",
+					label: scene.content.label,
+				}
+			: {
+					narration: scene.narration,
+					visual: "texto",
+					lines: scene.content.lines.map((l) => ({ text: l.text, emphasis: Boolean(l.emphasis) })),
+					value: 0,
+					suffix: "",
+					label: "",
+				},
+	),
+});
+
+const isAborted = (options: LlmOptions) => Boolean(options.signal?.aborted);
+
+/** Cuántas veces se pide mejorar un guion ya válido (cada intento cuesta ~40 s). */
+export const SOFT_RETRIES = 1;
+
+/**
+ * Pide el guion hasta que cumple el esquema (errores graves: se reintenta hasta MAX_ATTEMPTS).
+ * Con un guion válido, pide como mucho SOFT_RETRIES mejoras y se queda con el mejor intento.
+ */
+async function askScript(
+	llm: LlmProvider,
+	messages: LlmMessage[],
+	schema: ReturnType<typeof llmOutput>,
+	seconds: number,
+	options: LlmOptions,
+): Promise<{ script: Script; attempts: number; softProblems: string[] }> {
+	let lastProblem = "";
+	let best: { script: Script; softProblems: string[] } | null = null;
+	let softRetries = 0;
+	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+		const raw = await llm.generateJson(messages, z.toJSONSchema(schema), options);
+		let feedback: string;
+		try {
+			const out = schema.parse(JSON.parse(raw));
+			const soft = softProblems(out, seconds);
+			if (!best || soft.length < best.softProblems.length)
+				best = { script: fromLlm(out), softProblems: soft };
+			if (soft.length === 0 || softRetries >= SOFT_RETRIES) {
+				return { ...best, attempts: attempt };
+			}
+			softRetries++;
+			feedback = `El JSON es válido, pero mejóralo:\n${soft.map((p) => `- ${p}`).join("\n")}\nResponde de nuevo con el guion completo.`;
+		} catch (error) {
+			if (isAborted(options)) throw error;
+			lastProblem = error instanceof z.ZodError ? z.prettifyError(error) : String(error);
+			feedback = `Tu JSON no es válido:\n${lastProblem}\nCorrígelo y responde de nuevo.`;
+		}
+		messages.push({ role: "assistant", content: raw }, { role: "user", content: feedback });
+	}
+	if (best) return { ...best, attempts: MAX_ATTEMPTS };
+	throw new Error(`La IA no produjo un guion válido tras ${MAX_ATTEMPTS} intentos: ${lastProblem}`);
+}
+
+export const reviewSystemPrompt = (opts: { language: string; seconds: number }) =>
+	`Eres editor y verificador de datos de videos divulgativos cortos.
+Recibes un guion en JSON. Devuelve el MISMO formato con el guion mejorado. Revisa, en este orden:
+1. Datos: corrige lo que sea falso o impreciso. Si dudas de una afirmación o una cifra, generalízala o quítala.
+2. Repeticiones: si dos escenas dicen lo mismo, cambia una por una idea o un dato nuevo del tema.
+3. "lines": deben RESUMIR la narración con otras palabras (2 a 4 palabras por línea), no copiar trozos de ella.
+4. Ortografía y naturalidad en ${LANGUAGE_NAMES[opts.language] ?? opts.language}; números de la narración con letras.
+5. Mantén la duración: unas ${Math.round(opts.seconds * WORDS_PER_SECOND)} palabras de narración en total, y el gancho al principio.
+Responde solo con el JSON.`;
+
+export type ScriptQualityOptions = {
+	/** Razonar antes de escribir (modo "pensar" del modelo). Más lento. */
+	think?: boolean;
+	/** Segunda pasada: la IA revisa datos, repeticiones y estilo de su borrador. */
+	review?: boolean;
+};
+
+/**
+ * Configuración por defecto, elegida con la evaluación de docs/04-guion-ia.md (Qwen3 8B):
+ * "pensar" fue la única fiable en las dos rondas (8/8) y la de mejores datos; la revisión
+ * no corrige errores con un modelo pequeño (a veces añade otros), así que queda desactivada.
+ */
+export const DEFAULT_SCRIPT_QUALITY: ScriptQualityOptions = { review: false, think: true };
+
+export type GenerateScriptOptions = {
+	topic: string;
+	tone: string;
+	language: string;
+	seconds: number;
+	channel?: string;
+	signal?: AbortSignal;
+	quality?: ScriptQualityOptions;
+	onStage?: (stage: "draft" | "review") => void;
+};
+
+/** Escribe el guion con la IA (borrador y, si se pide, revisión). Devuelve también cuántas llamadas hizo. */
+export async function generateScriptWithStats(
+	llm: LlmProvider,
+	opts: GenerateScriptOptions,
+): Promise<{ script: Script; calls: number; reviewed: boolean; softProblems: string[] }> {
+	const quality = { ...DEFAULT_SCRIPT_QUALITY, ...opts.quality };
+	const schema = llmOutput(sceneRange(opts.seconds));
+	const options: LlmOptions = { signal: opts.signal, think: quality.think };
+
+	opts.onStage?.("draft");
+	const draft = await askScript(
+		llm,
+		[
+			{ role: "system", content: scriptSystemPrompt(opts) },
+			{ role: "user", content: `Tema del video: ${opts.topic}` },
+		],
+		schema,
+		opts.seconds,
+		options,
+	);
+	if (!quality.review)
+		return {
+			script: draft.script,
+			calls: draft.attempts,
+			reviewed: false,
+			softProblems: draft.softProblems,
+		};
+
+	opts.onStage?.("review");
+	try {
+		const reviewed = await askScript(
+			llm,
+			[
+				{ role: "system", content: reviewSystemPrompt(opts) },
+				{
+					role: "user",
+					content: `Tema: ${opts.topic}\n\nGuion:\n${JSON.stringify(toLlm(draft.script))}`,
+				},
+			],
+			schema,
+			opts.seconds,
+			{ ...options, temperature: 0.3 },
+		);
+		return {
+			script: reviewed.script,
+			calls: draft.attempts + reviewed.attempts,
+			reviewed: true,
+			softProblems: reviewed.softProblems,
+		};
+	} catch (error) {
+		if (opts.signal?.aborted) throw error;
+		// Si la revisión no sale bien, el borrador ya era válido: mejor eso que nada.
+		return {
+			script: draft.script,
+			calls: draft.attempts + MAX_ATTEMPTS,
+			reviewed: false,
+			softProblems: draft.softProblems,
+		};
+	}
+}
+
 /** Pide el guion a la IA; si la respuesta no es válida, le devuelve el error para que se corrija. */
 export async function generateScript(
 	llm: LlmProvider,
-	opts: {
-		topic: string;
-		tone: string;
-		language: string;
-		seconds: number;
-		channel?: string;
-		signal?: AbortSignal;
-	},
+	opts: GenerateScriptOptions,
 ): Promise<Script> {
-	const schema = llmOutput(sceneRange(opts.seconds), opts.seconds);
-	const messages: LlmMessage[] = [
-		{ role: "system", content: scriptSystemPrompt(opts) },
-		{ role: "user", content: `Tema del video: ${opts.topic}` },
-	];
-	let lastProblem = "";
-	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-		const raw = await llm.generateJson(messages, z.toJSONSchema(schema), opts.signal);
-		try {
-			const out = schema.parse(JSON.parse(raw));
-			return scriptSchema.parse({
-				title: out.title,
-				scenes: out.scenes.map((scene) =>
-					scene.visual === "cifra"
-						? {
-								narration: scene.narration,
-								content: {
-									type: "stat",
-									value: scene.value,
-									suffix: scene.suffix || undefined,
-									label: scene.label,
-								},
-							}
-						: {
-								narration: scene.narration,
-								content: {
-									type: "kinetic-text",
-									lines: scene.lines
-										.filter((l) => l.text.trim())
-										.map((l) => (l.emphasis ? l : { text: l.text })),
-								},
-							},
-				),
-			});
-		} catch (error) {
-			lastProblem = error instanceof z.ZodError ? z.prettifyError(error) : String(error);
-		}
-		messages.push(
-			{ role: "assistant", content: raw },
-			{
-				role: "user",
-				content: `Tu JSON no es válido:\n${lastProblem}\nCorrígelo y responde de nuevo.`,
-			},
-		);
-	}
-	throw new Error(`La IA no produjo un guion válido tras ${MAX_ATTEMPTS} intentos: ${lastProblem}`);
+	return (await generateScriptWithStats(llm, opts)).script;
 }
 
 /** Proveedor local con Ollama (salida estructurada con JSON Schema). */
@@ -260,19 +431,19 @@ export class OllamaProvider implements LlmProvider {
 	async generateJson(
 		messages: LlmMessage[],
 		jsonSchema: object,
-		signal?: AbortSignal,
+		options: LlmOptions = {},
 	): Promise<string> {
 		const res = await fetch(`${this.baseUrl}/api/chat`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			signal,
+			signal: options.signal,
 			body: JSON.stringify({
 				model: this.model,
 				messages,
 				format: jsonSchema,
 				stream: false,
-				think: false,
-				options: { temperature: 0.7 },
+				think: options.think ?? false,
+				options: { temperature: options.temperature ?? 0.7 },
 			}),
 		});
 		if (!res.ok) throw new Error(`Ollama respondió ${res.status}: ${await res.text()}`);

@@ -99,7 +99,7 @@ export function VideoPage() {
 				{data.status === "scripting" ? (
 					<EmptyState
 						title="La IA está escribiendo el guion"
-						description="Suele tardar menos de un minuto. Después Frameflow pondrá la voz y creará el video; podrás editar el guion en cuanto esté listo."
+						description="Con el modelo local suele tardar de 3 a 4 minutos: primero razona y luego escribe. Después Frameflow pondrá la voz y creará el video; podrás editar el guion en cuanto esté listo."
 					/>
 				) : (
 					<ScriptEditor

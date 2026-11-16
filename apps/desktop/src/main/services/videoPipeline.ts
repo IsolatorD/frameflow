@@ -99,6 +99,7 @@ export function createVideoPipeline(deps: Deps) {
 		video: VideoDetail,
 		project: ProjectWithBrand,
 		signal: AbortSignal,
+		progress: (p: number | null, message: string) => void,
 	) => {
 		const script = await generateScript(deps.llm, {
 			topic: video.topic,
@@ -107,6 +108,13 @@ export function createVideoPipeline(deps: Deps) {
 			seconds: targetSeconds.get(video.id) ?? 60,
 			channel: project.name,
 			signal,
+			onStage: (stage) =>
+				progress(
+					null,
+					stage === "draft"
+						? "La IA está pensando y escribiendo el guion (3–4 min)…"
+						: "Revisando datos y estilo del guion…",
+				),
 		});
 		const sb = assembleStoryboard({
 			script,
@@ -226,8 +234,7 @@ export function createVideoPipeline(deps: Deps) {
 				targetSeconds.set(video.id, data.targetSeconds);
 				// Automático: guion → voz → video, sin pararse a revisar.
 				runJob(video.id, "script", async (signal, progress) => {
-					progress(null, "Escribiendo el guion con IA…");
-					const scripted = await writeScript(video, project, signal);
+					const scripted = await writeScript(video, project, signal, progress);
 					const voiced = await makeVoice(scripted, project, signal, progress);
 					await makeRender(voiced, project, signal, progress);
 				});

@@ -12,7 +12,8 @@
 		"./storyboard/v1": "./src/storyboard/v1.ts",
 		"./script": "./src/script/script.ts",
 		"./script/ai": "./src/script/ai.ts",
-		"./video": "./src/video/video.ts"
+		"./video": "./src/video/video.ts",
+		"./script/quality": "./src/script/quality.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

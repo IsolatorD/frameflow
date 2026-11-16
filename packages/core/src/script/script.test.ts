@@ -34,7 +34,7 @@ const textScene = (narration: string, line: string) => ({
 const validAnswer = JSON.stringify({
 	title: "La luz del Sol",
 	scenes: [
-		textScene("¿Sabías que la luz del Sol es del pasado?", "La luz del Sol"),
+		textScene("¿Sabías que la luz del Sol es del pasado?", "Luz antigua"),
 		{
 			narration: "Tarda unos ocho minutos en llegar hasta aquí.",
 			visual: "cifra",
@@ -43,7 +43,7 @@ const validAnswer = JSON.stringify({
 			suffix: " min",
 			label: "en llegar",
 		},
-		textScene("Cada vez que miras al cielo, miras al pasado.", "Miras al pasado"),
+		textScene("Cada vez que miras al cielo, miras al pasado.", "Viaje en el tiempo"),
 	],
 });
 
@@ -99,18 +99,51 @@ describe("generateScript", () => {
 		expect(feedback).toContain("el resto de escenas deben ser");
 	});
 
-	it("pide alargar un guion corto y no corta líneas: las devuelve como error", async () => {
-		const short = JSON.stringify({
-			title: "Corto",
+	it("una línea demasiado larga es un error: se devuelve a la IA, no se corta", async () => {
+		const longLine = JSON.stringify({
+			title: "Largo",
 			scenes: [1, 2, 3].map(() =>
-				textScene("Una frase de cinco palabras.", "¿Sabías que hay objetos tan fuertes?"),
+				textScene("Una frase completa de prueba aquí.", "¿Sabías que hay objetos tan fuertes?"),
 			),
 		});
-		const llm = fakeLlm([short, validAnswer]);
-		await generateScript(llm, { topic: "x", tone: "", language: "es", seconds: 10 });
-		const feedback = JSON.stringify(llm.lastMessages);
-		expect(feedback).toContain("Alarga las narraciones");
-		expect(feedback).toContain("es demasiado larga");
+		const llm = fakeLlm([longLine, validAnswer]);
+		const script = await generateScript(llm, { topic: "x", tone: "", language: "es", seconds: 10 });
+		expect(JSON.stringify(llm.lastMessages)).toContain("es demasiado larga");
+		expect(script.title).toBe("La luz del Sol");
+	});
+
+	it("la duración y el estilo se piden una vez; si no mejora, usa el mejor intento", async () => {
+		const short = JSON.stringify({
+			title: "Corto",
+			scenes: [1, 2, 3].map((n) =>
+				textScene(`Una frase corta número ${["uno", "dos", "tres"][n - 1]} aquí.`, "Idea"),
+			),
+		});
+		const llm = fakeLlm([short, short, validAnswer]);
+		const script = await generateScript(llm, { topic: "x", tone: "", language: "es", seconds: 20 });
+		expect(llm.calls).toBe(2); // una sola petición de mejora
+		expect(JSON.stringify(llm.lastMessages)).toContain("Alarga las narraciones");
+		expect(script.title).toBe("Corto"); // no falla: se queda con el guion válido
+	});
+
+	it("con revisión, la segunda pasada mejora el borrador y, si falla, conserva el borrador", async () => {
+		const reviewed = JSON.stringify({ ...JSON.parse(validAnswer), title: "Revisado" });
+		const ok = await generateScript(fakeLlm([validAnswer, reviewed]), {
+			topic: "x",
+			tone: "",
+			language: "es",
+			seconds: 10,
+			quality: { review: true },
+		});
+		expect(ok.title).toBe("Revisado");
+		const fallback = await generateScript(fakeLlm([validAnswer, "{}", "{}", "{}"]), {
+			topic: "x",
+			tone: "",
+			language: "es",
+			seconds: 10,
+			quality: { review: true },
+		});
+		expect(fallback.title).toBe("La luz del Sol");
 	});
 
 	it("se rinde tras tres intentos", async () => {
