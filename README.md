@@ -35,6 +35,8 @@ pnpm test          # tests de core y db
 pnpm typecheck
 pnpm --filter @frameflow/desktop smoke   # compila, abre la app y recorre proyecto → marca → video (capturas en test-results/)
 SMOKE_FULL=1 pnpm --filter @frameflow/desktop smoke   # además genera voz real y el MP4 (tarda minutos)
+SMOKE_AI=1 pnpm --filter @frameflow/desktop smoke     # además prueba el modo automático con la IA real
+FRAMEFLOW_LIVE_AI=1 pnpm --filter @frameflow/core exec vitest run ai.live   # guion con el modelo real
 pnpm --filter @frameflow/db generate     # nueva migración tras cambiar packages/db/src/schema.ts
 ```
 
@@ -45,4 +47,3 @@ pnpm --filter @frameflow/db generate     # nueva migración tras cambiar package
 - **Modo automático (IA):** Ollama en marcha con el modelo de `FRAMEFLOW_MODEL`
   (por defecto `hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M`). Sin él, la app ofrece solo el modo paso a paso.
 - Los videos se guardan en `~/Frameflow/projects/<canal>/videos/<id>/` (voz y `renders/v<versión>.mp4`).
-

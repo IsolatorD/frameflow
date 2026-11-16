@@ -22,26 +22,28 @@ const fakeLlm = (responses: string[]): LlmProvider & { calls: number; lastMessag
 	return llm;
 };
 
+const textScene = (narration: string, line: string) => ({
+	narration,
+	visual: "texto",
+	lines: [{ text: line, emphasis: true }],
+	value: 0,
+	suffix: "",
+	label: "",
+});
+
 const validAnswer = JSON.stringify({
 	title: "La luz del Sol",
 	scenes: [
+		textScene("¿Sabías que la luz del Sol es del pasado?", "La luz del Sol"),
 		{
-			type: "kinetic-text",
-			narration: "¿Sabías que la luz del Sol es del pasado?",
-			lines: [{ text: "La luz del Sol", emphasis: true }],
-		},
-		{
-			type: "stat",
-			narration: "Tarda ocho minutos en llegar.",
+			narration: "Tarda unos ocho minutos en llegar hasta aquí.",
+			visual: "cifra",
+			lines: [],
 			value: 8,
 			suffix: " min",
 			label: "en llegar",
 		},
-		{
-			type: "kinetic-text",
-			narration: "Miras al pasado.",
-			lines: [{ text: "Miras al pasado", emphasis: false }],
-		},
+		textScene("Cada vez que miras al cielo, miras al pasado.", "Miras al pasado"),
 	],
 });
 
@@ -51,7 +53,7 @@ describe("generateScript", () => {
 			topic: "luz",
 			tone: "curioso",
 			language: "es",
-			seconds: 20,
+			seconds: 10,
 		});
 		expect(script.scenes).toHaveLength(3);
 		expect(script.scenes[1]?.content).toEqual({
@@ -68,11 +70,47 @@ describe("generateScript", () => {
 			topic: "luz",
 			tone: "curioso",
 			language: "es",
-			seconds: 20,
+			seconds: 10,
 		});
 		expect(llm.calls).toBe(2);
 		expect(script.title).toBe("La luz del Sol");
 		expect(JSON.stringify(llm.lastMessages)).toContain("Tu JSON no es válido");
+	});
+
+	it("rechaza guiones válidos de forma pero inservibles y explica por qué", async () => {
+		// Lo que devolvió Qwen3 8B con el formato anterior: todo "cifra" con 0 y fragmentos.
+		const useless = JSON.stringify({
+			title: "Marte",
+			scenes: [1, 2, 3].map(() => ({
+				narration: "La superficie de Marte",
+				visual: "cifra",
+				lines: [],
+				value: 0,
+				suffix: "",
+				label: "kinetic-text",
+			})),
+		});
+		const llm = fakeLlm([useless, validAnswer]);
+		await generateScript(llm, { topic: "Marte", tone: "", language: "es", seconds: 10 });
+		const feedback = JSON.stringify(llm.lastMessages);
+		expect(feedback).toContain("frases completas");
+		expect(feedback).toContain("explica el número");
+		expect(feedback).toContain("un número real");
+		expect(feedback).toContain("el resto de escenas deben ser");
+	});
+
+	it("pide alargar un guion corto y no corta líneas: las devuelve como error", async () => {
+		const short = JSON.stringify({
+			title: "Corto",
+			scenes: [1, 2, 3].map(() =>
+				textScene("Una frase de cinco palabras.", "¿Sabías que hay objetos tan fuertes?"),
+			),
+		});
+		const llm = fakeLlm([short, validAnswer]);
+		await generateScript(llm, { topic: "x", tone: "", language: "es", seconds: 10 });
+		const feedback = JSON.stringify(llm.lastMessages);
+		expect(feedback).toContain("Alarga las narraciones");
+		expect(feedback).toContain("es demasiado larga");
 	});
 
 	it("se rinde tras tres intentos", async () => {
@@ -81,7 +119,7 @@ describe("generateScript", () => {
 				topic: "x",
 				tone: "",
 				language: "es",
-				seconds: 20,
+				seconds: 10,
 			}),
 		).rejects.toThrow("tras 3 intentos");
 	});

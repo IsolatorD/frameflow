@@ -16,29 +16,113 @@ export type LlmStatus =
 	| { available: false; name: string; reason: string };
 
 // Lo ÚNICO que escribe la IA. Límites de longitud pensados para pantalla vertical.
-const llmScene = z.discriminatedUnion("type", [
-	z.object({
-		type: z.literal("kinetic-text"),
-		narration: z.string().min(1),
-		lines: z
-			.array(z.object({ text: z.string().min(1).max(30), emphasis: z.boolean() }))
-			.min(1)
-			.max(3),
-	}),
-	z.object({
-		type: z.literal("stat"),
-		narration: z.string().min(1),
-		value: z.number(),
-		suffix: z.string().max(8),
-		label: z.string().min(1).max(40),
-	}),
-]);
+//
+// Formato PLANO a propósito: con salida restringida por JSON Schema, una unión de tipos (anyOf)
+// hace que modelos pequeños se queden en la primera rama (probado con Qwen3 8B: todas las escenas
+// salían como "cifra" con valor 0). Aquí cada escena tiene todos los campos y `visual` decide
+// cuáles cuentan; las reglas de cada tipo se validan después y el error se le devuelve a la IA.
+// Tampoco hay límites de longitud en el esquema: con salida restringida, un maxLength obliga al
+// modelo a cortar palabras a la mitad ("objetos tan fu"). Las longitudes se validan después.
+const TECHNICAL_WORDS = /^(kinetic-text|stat|texto|cifra|narration|narración|gancho|label)$/i;
 
-const llmOutput = (range: [number, number]) =>
-	z.object({
-		title: z.string().min(1).max(60),
-		scenes: z.array(llmScene).min(range[0]).max(range[1]),
-	});
+const llmScene = z.object({
+	narration: z.string().min(1),
+	visual: z.enum(["texto", "cifra"]),
+	lines: z.array(z.object({ text: z.string(), emphasis: z.boolean() })),
+	value: z.number(),
+	suffix: z.string(),
+	label: z.string(),
+});
+
+export const LIMITS = { line: 30, lines: 3, title: 60, suffix: 8, label: 40 } as const;
+/** Margen aceptado sobre la duración pedida (la IA no cuenta palabras con precisión). */
+export const DURATION_TOLERANCE = { min: 0.75, max: 1.35 } as const;
+
+const llmOutput = (range: [number, number], seconds: number) =>
+	z
+		.object({
+			title: z.string().min(1),
+			scenes: z.array(llmScene).min(range[0]).max(range[1]),
+		})
+		.superRefine((out, ctx) => {
+			const issue = (message: string, path: (string | number)[] = []) =>
+				ctx.addIssue({ code: "custom", message, path });
+			const problem = (i: number, message: string) =>
+				issue(`Escena ${i + 1}: ${message}`, ["scenes", i]);
+			if (out.title.length > LIMITS.title)
+				issue(`El título es demasiado largo (máx. ${LIMITS.title} caracteres).`, ["title"]);
+
+			const words = out.scenes.reduce((t, s) => t + s.narration.trim().split(/\s+/).length, 0);
+			const estimated = Math.round(words / WORDS_PER_SECOND);
+			if (estimated < seconds * DURATION_TOLERANCE.min)
+				issue(
+					`El guion dura unos ${estimated} s y el objetivo son ${seconds} s (unas ${Math.round(seconds * WORDS_PER_SECOND)} palabras de narración en total). Alarga las narraciones con información nueva, sin repetir datos.`,
+				);
+			if (estimated > seconds * DURATION_TOLERANCE.max)
+				issue(
+					`El guion dura unos ${estimated} s y el objetivo son ${seconds} s. Acorta las narraciones.`,
+				);
+
+			out.scenes.forEach((scene, i) => {
+				if (scene.lines.length > LIMITS.lines) problem(i, `como mucho ${LIMITS.lines} líneas.`);
+				for (const line of scene.lines) {
+					if (line.text.length > LIMITS.line)
+						problem(
+							i,
+							`la línea "${line.text}" es demasiado larga (máx. ${LIMITS.line} caracteres): resúmela en 2 a 4 palabras.`,
+						);
+				}
+				if (scene.suffix.length > LIMITS.suffix)
+					problem(i, `"suffix" es la unidad corta (máx. ${LIMITS.suffix} caracteres).`);
+				if (scene.label.length > LIMITS.label)
+					problem(i, `"label" es demasiado largo (máx. ${LIMITS.label} caracteres).`);
+				if (scene.narration.trim().split(/\s+/).length < 5)
+					problem(i, "la narración debe ser una o dos frases completas, no un fragmento.");
+				if (/\d/.test(scene.narration))
+					problem(i, "escribe los números de la narración con letras.");
+				if (scene.visual === "texto" && !scene.lines.some((l) => l.text.trim()))
+					problem(i, 'una escena "texto" necesita de 1 a 3 líneas con texto.');
+				if (scene.visual === "cifra") {
+					if (!scene.label.trim() || TECHNICAL_WORDS.test(scene.label.trim()))
+						problem(i, 'en una escena "cifra", "label" es una frase corta que explica el número.');
+					if (scene.value === 0)
+						problem(i, 'una escena "cifra" necesita un número real en "value".');
+				}
+			});
+			if (out.scenes.every((s) => s.visual === "cifra"))
+				ctx.addIssue({
+					code: "custom",
+					message: 'Usa "cifra" solo para datos numéricos; el resto de escenas deben ser "texto".',
+					path: ["scenes"],
+				});
+		});
+
+/** Ejemplo de respuesta (otro tema) para que el modelo vea la forma esperada. */
+const EXAMPLE = JSON.stringify({
+	title: "¿Por qué el mar es salado?",
+	scenes: [
+		{
+			narration:
+				"¿Alguna vez te preguntaste por qué el agua del mar es salada y la de los ríos no?",
+			visual: "texto",
+			lines: [
+				{ text: "¿Por qué el mar", emphasis: false },
+				{ text: "es salado?", emphasis: true },
+			],
+			value: 0,
+			suffix: "",
+			label: "",
+		},
+		{
+			narration: "Cada litro de agua de mar lleva unos treinta y cinco gramos de sal disuelta.",
+			visual: "cifra",
+			lines: [],
+			value: 35,
+			suffix: " g",
+			label: "de sal por litro",
+		},
+	],
+});
 
 const LANGUAGE_NAMES: Record<string, string> = { es: "español", en: "inglés" };
 
@@ -55,16 +139,25 @@ export const scriptSystemPrompt = (opts: {
 Escribe en ${LANGUAGE_NAMES[opts.language] ?? opts.language}. Tono: ${opts.tone}
 
 Reglas:
-- Duración objetivo: ${opts.seconds} segundos de narración en total (unas ${Math.round(opts.seconds * WORDS_PER_SECOND)} palabras).
+- Duración objetivo: ${opts.seconds} segundos de narración en total, es decir, unas ${Math.round(opts.seconds * WORDS_PER_SECOND)} palabras
+  (unas ${Math.round((opts.seconds * WORDS_PER_SECOND) / Math.round((min + max) / 2))} palabras por escena si usas ${Math.round((min + max) / 2)} escenas).
 - Entre ${min} y ${max} escenas. La primera es un gancho; la última, un cierre memorable.
 - "narration": lo que dice la voz en esa escena, 1 o 2 frases completas.
   Escribe TODOS los números con letras (p. ej. "ocho minutos", nunca "8 minutos").
-- Escena "kinetic-text": "lines" son 1 a 3 trozos MUY cortos (máx. 4 palabras cada uno) que resumen
-  visualmente la narración. Marca con "emphasis": true solo la palabra clave (como mucho una línea).
-- Escena "stat": úsala cuando haya una cifra clave. "value" es el número en cifras, "suffix" su unidad
-  corta (" min", "%", " km"…; puede ser ""), y "label" una frase corta que explica la cifra.
-- Usa al menos una escena "stat" si el tema tiene datos numéricos.
+- "visual" decide lo que se ve en pantalla:
+  - "texto" (la mayoría de escenas): "lines" son 1 a 3 trozos MUY cortos (máx. 4 palabras cada uno)
+    que resumen visualmente la narración; "emphasis": true solo en la línea clave (como mucho una).
+    Deja "value": 0, "suffix": "" y "label": "".
+  - "cifra" (solo cuando la escena gira en torno a un número): "value" es el número en cifras,
+    "suffix" su unidad corta (" min", "%", " km"…; puede ser "") y "label" una frase corta que
+    explica la cifra. Deja "lines": [].
+- Usa "cifra" en una o dos escenas si el tema tiene datos numéricos; el resto, "texto".
+- Cada escena aporta algo nuevo: no repitas un dato ni una idea que ya dijiste.
+- Las "lines" resumen la idea de su narración con otras palabras; no copies trozos de la frase.
 - Solo hechos verificables y ampliamente aceptados. Si no estás seguro de una cifra, no la uses.
+Ejemplo de la forma (sobre otro tema, más corto):
+${EXAMPLE}
+
 Responde solo con el JSON pedido.`;
 };
 
@@ -82,7 +175,7 @@ export async function generateScript(
 		signal?: AbortSignal;
 	},
 ): Promise<Script> {
-	const schema = llmOutput(sceneRange(opts.seconds));
+	const schema = llmOutput(sceneRange(opts.seconds), opts.seconds);
 	const messages: LlmMessage[] = [
 		{ role: "system", content: scriptSystemPrompt(opts) },
 		{ role: "user", content: `Tema del video: ${opts.topic}` },
@@ -95,7 +188,7 @@ export async function generateScript(
 			return scriptSchema.parse({
 				title: out.title,
 				scenes: out.scenes.map((scene) =>
-					scene.type === "stat"
+					scene.visual === "cifra"
 						? {
 								narration: scene.narration,
 								content: {
@@ -109,7 +202,9 @@ export async function generateScript(
 								narration: scene.narration,
 								content: {
 									type: "kinetic-text",
-									lines: scene.lines.map((l) => (l.emphasis ? l : { text: l.text })),
+									lines: scene.lines
+										.filter((l) => l.text.trim())
+										.map((l) => (l.emphasis ? l : { text: l.text })),
 								},
 							},
 				),

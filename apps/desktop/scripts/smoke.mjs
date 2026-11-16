@@ -144,9 +144,30 @@ try {
 		await page.screenshot({ path: join(shots, "12-video-listo.png") });
 	}
 
+	// Modo automático con IA real (guion → voz → MP4 sin pararse): solo con SMOKE_AI=1.
+	if (process.env.SMOKE_AI) {
+		await page
+			.getByRole("button", { name: /^Generar video/ })
+			.first()
+			.click();
+		await page.getByLabel("¿De qué trata el video?").fill("Por qué Marte es rojo");
+		await page.getByLabel("Duración aproximada").fill("30");
+		await page.getByText("Automático con IA", { exact: true }).click();
+		await page.getByRole("button", { name: "Crear video" }).click();
+		await page
+			.getByText(/escribiendo el guion/i)
+			.first()
+			.waitFor();
+		await page.screenshot({ path: join(shots, "14-auto-guion.png") });
+		await page.getByRole("button", { name: "Ver video" }).waitFor({ timeout: 900_000 });
+		await page.waitForTimeout(800);
+		await page.screenshot({ path: join(shots, "15-auto-listo.png") });
+	}
+
 	// La biblioteca lista el video.
 	await page.getByRole("button", { name: "Biblioteca", exact: true }).click();
 	await page.getByRole("button", { name: /Por qué el cielo es azul/ }).waitFor();
+	if (process.env.SMOKE_AI) await page.getByRole("button", { name: /Marte/ }).waitFor();
 	await page.screenshot({ path: join(shots, "13-biblioteca.png") });
 
 	// Volver al listado desde la barra lateral.

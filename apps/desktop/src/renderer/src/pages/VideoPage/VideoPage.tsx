@@ -3,6 +3,7 @@ import { Badge } from "@frameflow/ui/src/atoms/Badge/Badge";
 import { Button } from "@frameflow/ui/src/atoms/Button/Button";
 import { ProgressBar } from "@frameflow/ui/src/atoms/ProgressBar/ProgressBar";
 import { Dialog } from "@frameflow/ui/src/molecules/Dialog/Dialog";
+import { EmptyState } from "@frameflow/ui/src/molecules/EmptyState/EmptyState";
 import { Section } from "@frameflow/ui/src/molecules/Section/Section";
 import { StepIndicator } from "@frameflow/ui/src/molecules/StepIndicator/StepIndicator";
 import { ScriptEditor } from "@frameflow/ui/src/organisms/ScriptEditor/ScriptEditor";
@@ -95,21 +96,28 @@ export function VideoPage() {
 			actions={<StepIndicator steps={videoSteps(data)} />}
 		>
 			<div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-6">
-				<ScriptEditor
-					value={script}
-					estimateSeconds={estimateSeconds}
-					onSave={(next) => actions.saveScript.mutate(next)}
-					onDirtyChange={setDirty}
-					saving={actions.saveScript.isPending}
-					serverError={actions.saveScript.error?.message}
-					locked={busy}
-					lockedReason={
-						busy ? "El guion no se puede editar mientras se genera la voz o el video." : undefined
-					}
-				/>
+				{data.status === "scripting" ? (
+					<EmptyState
+						title="La IA está escribiendo el guion"
+						description="Suele tardar menos de un minuto. Después Frameflow pondrá la voz y creará el video; podrás editar el guion en cuanto esté listo."
+					/>
+				) : (
+					<ScriptEditor
+						value={script}
+						estimateSeconds={estimateSeconds}
+						onSave={(next) => actions.saveScript.mutate(next)}
+						onDirtyChange={setDirty}
+						saving={actions.saveScript.isPending}
+						serverError={actions.saveScript.error?.message}
+						locked={busy}
+						lockedReason={
+							busy ? "El guion no se puede editar mientras se genera la voz o el video." : undefined
+						}
+					/>
+				)}
 
 				<aside className="sticky top-0 flex flex-col gap-4">
-					{media.data && project.data ? (
+					{media.data && project.data && data.status !== "scripting" ? (
 						<StoryboardPreview
 							storyboard={data.storyboard}
 							mediaBaseUrl={`${media.data}/projects/${project.data.slug}`}
@@ -206,7 +214,6 @@ export function VideoPage() {
 					</Section>
 				</aside>
 			</div>
-
 			{blocker.state === "blocked" ? (
 				<Dialog
 					title="Tienes cambios sin guardar"
