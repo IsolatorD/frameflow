@@ -207,6 +207,59 @@ try {
 	await page.screenshot({ path: join(shots, "11b-editor-ajustes.png") });
 	await page.getByRole("tab", { name: /Guion y escenas/ }).click();
 
+	// Editor v2 — línea de tiempo: recortar con teclado, arrastrar con el ratón, deshacer/rehacer.
+	const versionText = async () =>
+		(await page
+			.getByText(/versión \d+/)
+			.first()
+			.textContent()) ?? "";
+	const waitVersionAfter = async (before) => {
+		const n = Number(/versión (\d+)/.exec(before)?.[1]);
+		await page.getByText(new RegExp(`versión ${n + 1}\\b`)).waitFor();
+	};
+	const clip = (pattern) => page.getByRole("button", { name: pattern }).first();
+	const dragBy = async (locator, dx, fromRight = false) => {
+		const box = await locator.boundingBox();
+		if (!box) throw new Error("Clip sin caja");
+		const x = fromRight ? box.x + box.width - 3 : box.x + box.width / 2;
+		const y = box.y + box.height / 2;
+		await page.mouse.move(x, y);
+		await page.mouse.down();
+		await page.mouse.move(x + dx / 2, y, { steps: 5 });
+		await page.mouse.move(x + dx, y, { steps: 5 });
+		await page.mouse.up();
+	};
+
+	let before = await versionText();
+	await clip(/^2 · /).focus();
+	await page.keyboard.press("Alt+Shift+ArrowRight"); // +1 s de pausa tras la voz
+	await waitVersionAfter(before);
+
+	before = await versionText();
+	await dragBy(clip(/Suscríbete a Astroinfo/), -60); // la llamada a la acción, antes
+	await waitVersionAfter(before);
+
+	before = await versionText();
+	const firstBox = await clip(/^1 · /).boundingBox();
+	const thirdBox = await clip(/^3 · /).boundingBox();
+	await dragBy(clip(/^3 · /), (firstBox?.x ?? 0) - (thirdBox?.x ?? 0) - 10); // la escena 3, al principio
+	await waitVersionAfter(before);
+	await clip(/^1 · Frase final/).waitFor();
+	await page.screenshot({ path: join(shots, "11c-escena-movida.png") });
+
+	before = await versionText();
+	await page.getByRole("button", { name: "Deshacer" }).click();
+	await waitVersionAfter(before);
+	await clip(/^1 · ¿Sabías/).waitFor(); // vuelve el orden original
+	before = await versionText();
+	await page.getByRole("button", { name: "Rehacer" }).click();
+	await waitVersionAfter(before);
+	await clip(/^1 · Frase final/).waitFor();
+	before = await versionText();
+	await page.keyboard.press("Meta+z"); // atajo de teclado
+	await waitVersionAfter(before);
+	await clip(/^1 · ¿Sabías/).waitFor();
+
 	// Prueba completa (voz real con Kokoro + render MP4): solo con SMOKE_FULL=1, tarda minutos.
 	if (process.env.SMOKE_FULL) {
 		await page.getByRole("button", { name: "Generar voz" }).click();
@@ -226,6 +279,38 @@ try {
 		await page.screenshot({ path: join(shots, "12-una-escena-sin-voz.png") });
 		await page.getByRole("button", { name: "Generar voz de 1 escena" }).click();
 		await page.getByText("Voz al día en todas las escenas").waitFor({ timeout: 600_000 });
+
+		// Subtítulos: lo que se muestra puede diferir de lo que se dice; los tiempos se validan.
+		await page.getByRole("tab", { name: /Subtítulos/ }).click();
+		await page
+			.getByLabel(/Texto en pantalla para/)
+			.first()
+			.fill("¿¿SABÍAS");
+		const firstEnd = page.getByLabel(/^Fin de/).first();
+		const savedEnd = await firstEnd.inputValue();
+		await firstEnd.fill("0");
+		await page.getByText(/el final debe ser posterior al inicio/).waitFor();
+		expect(
+			await page.getByRole("button", { name: "Guardar subtítulos" }).isDisabled(),
+			"Tiempos inválidos no deben guardarse",
+		);
+		await firstEnd.fill(savedEnd);
+		before = await versionText();
+		await page.getByRole("button", { name: "Guardar subtítulos" }).click();
+		await waitVersionAfter(before);
+		expect(
+			(await page
+				.getByLabel(/Texto en pantalla para/)
+				.first()
+				.inputValue()) === "¿¿SABÍAS",
+			"El texto del subtítulo no se guardó",
+		);
+		expect(
+			await page.getByText("Voz al día en todas las escenas").isVisible(),
+			"Corregir subtítulos no debe invalidar la voz",
+		);
+		await page.screenshot({ path: join(shots, "12b-subtitulos.png") });
+		await page.getByRole("tab", { name: /Guion y escenas/ }).click();
 
 		await page.getByRole("button", { name: "Crear video (MP4)" }).click();
 		await page.getByRole("button", { name: "Ver video" }).waitFor({ timeout: 600_000 });

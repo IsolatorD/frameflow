@@ -75,9 +75,22 @@ editado del storyboard anterior:
 - La música en bucle se repite con varias `<Sequence>` en el renderer, no con `loop` de Remotion:
   con `loop`, los fundidos se reiniciaban en cada vuelta.
 
+## Editor v2
+
+- **Línea de tiempo editable** (`core/script/edit.ts`, `applyTimelineEdit`):
+  - recortar una escena por la derecha = pausa extra tras la voz (nunca corta la voz; máx. +5 s);
+  - arrastrar una escena = reordenarla (va donde cae su centro);
+  - mover/recortar la llamada a la acción (1–10 s); su hueco hasta el final se conserva al editar.
+  - Teclado: flechas para mover, Alt+flechas para recortar, Mayús = pasos de 1 s.
+- **Subtítulos** (`updateCaptions`): cada palabra puede mostrarse distinto a como se dice
+  (`display`, p. ej. "8 min" por "ocho minutos") y sus tiempos se corrigen a mano. Los tiempos
+  son relativos al audio de la voz, ordenados y dentro de él. Se conservan al editar otras escenas.
+- **Deshacer/rehacer** (⌘Z / ⇧⌘Z): cada cambio es una versión; deshacer restaura la anterior
+  como versión nueva, así que el historial nunca pierde nada.
+
 ## Pendiente para fases siguientes
 
-- v2 del editor: mover, recortar, duplicar, borrar clips y pistas (operaciones en `timeline.ts`).
+- Editor v3: pistas y clips libres (imágenes, videos, textos propios), duplicar y borrar clips.
 - v3: fotogramas clave (`transform` animado), filtros, velocidad variable, máscaras.
 - Rutas de recursos del proyecto: hoy `src` relativo se sirve con `staticFile`; la app de escritorio
   servirá la carpeta del proyecto.

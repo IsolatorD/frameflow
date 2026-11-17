@@ -1,9 +1,16 @@
+import type { TimelineEdit } from "@frameflow/core/script/edit";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import { findClip, storyboardDuration } from "@frameflow/core/storyboard/timeline";
 import { Timeline } from "@frameflow/ui/src/organisms/Timeline/Timeline";
 import type { PlayerRef } from "@remotion/player";
 import { type RefObject, useEffect, useMemo, useState } from "react";
-import { type ClipTarget, clipTarget, timelineTracks } from "./VideoTimeline.constants";
+import {
+	type ClipTarget,
+	clipTarget,
+	moveEdit,
+	timelineTracks,
+	trimEdit,
+} from "./VideoTimeline.constants";
 
 /**
  * Línea de tiempo enlazada al reproductor: sigue su posición (evento frameupdate) y lo mueve.
@@ -15,12 +22,17 @@ export function VideoTimeline({
 	playerRef,
 	selectedClipId,
 	onSelect,
+	onEdit,
+	disabled = false,
 }: {
 	storyboard: Storyboard;
 	voicedSceneIds: readonly string[];
 	playerRef: RefObject<PlayerRef | null>;
 	selectedClipId: string | null;
 	onSelect: (clipId: string, target: ClipTarget) => void;
+	/** Mover o recortar un clip (se guarda como versión nueva). */
+	onEdit: (edit: TimelineEdit) => void;
+	disabled?: boolean;
 }) {
 	const [time, setTime] = useState(0);
 	const fps = storyboard.fps;
@@ -54,6 +66,15 @@ export function VideoTimeline({
 			time={time}
 			selectedClipId={selectedClipId}
 			onSeek={seek}
+			disabled={disabled}
+			onMoveClip={(clipId, start) => {
+				const edit = moveEdit(storyboard, clipId, start);
+				if (edit) onEdit(edit);
+			}}
+			onTrimClip={(clipId, duration) => {
+				const edit = trimEdit(storyboard, clipId, duration);
+				if (edit) onEdit(edit);
+			}}
 			onSelectClip={(clipId) => {
 				const clip = findClip(storyboard, clipId)?.clip;
 				if (clip) seek(clip.start);

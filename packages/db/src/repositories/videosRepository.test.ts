@@ -153,4 +153,19 @@ describe("videosRepository", () => {
 		expect(detail?.error).toContain("interrumpió");
 		expect(detail?.render?.status).toBe("failed");
 	});
+	it("devuelve el storyboard de una versión concreta", async () => {
+		const { project, videos } = await setup();
+		const v = await videos.create({
+			projectId: project.id,
+			topic: "luz",
+			mode: "stepwise",
+			status: "draft",
+			storyboard: storyboardFor("primera"),
+			source: "manual",
+		});
+		await videos.saveVersion(v.id, storyboardFor("segunda"), "editor");
+		expect((await videos.getVersion(v.id, 1))?.title).toBe("primera");
+		expect((await videos.getVersion(v.id, 2))?.title).toBe("segunda");
+		expect(await videos.getVersion(v.id, 9)).toBeNull();
+	});
 });

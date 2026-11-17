@@ -1,5 +1,6 @@
 import type { Script, VideoSettings } from "@frameflow/core/script";
-import type { CreateVideoInput } from "@frameflow/core/video";
+import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
+import type { CreateVideoInput, VideoDetail } from "@frameflow/core/video";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { videosService } from "../../services/videosService/videosService";
 import { videoKey } from "../useVideo/useVideo";
@@ -20,6 +21,11 @@ export function useCreateVideo() {
 export function useVideoActions(videoId: string) {
 	const queryClient = useQueryClient();
 	const refresh = () => queryClient.invalidateQueries({ queryKey: VIDEOS_KEY });
+	// Las ediciones devuelven el video guardado: se escribe en la caché y se refresca la lista.
+	const saved = (video: VideoDetail) => {
+		queryClient.setQueryData(videoKey(videoId), video);
+		return queryClient.invalidateQueries({ queryKey: [...VIDEOS_KEY, "list"] });
+	};
 	return {
 		saveScript: useMutation({
 			mutationFn: (script: Script) => videosService.saveScript(videoId, script),
@@ -34,6 +40,19 @@ export function useVideoActions(videoId: string) {
 				queryClient.setQueryData(videoKey(videoId), video);
 				return queryClient.invalidateQueries({ queryKey: [...VIDEOS_KEY, "list"] });
 			},
+		}),
+		editTimeline: useMutation({
+			mutationFn: (edit: TimelineEdit) => videosService.editTimeline(videoId, edit),
+			onSuccess: saved,
+		}),
+		saveCaptions: useMutation({
+			mutationFn: (args: { sceneId: string; words: CaptionEdit }) =>
+				videosService.saveCaptions(videoId, args.sceneId, args.words),
+			onSuccess: saved,
+		}),
+		restoreVersion: useMutation({
+			mutationFn: (number: number) => videosService.restoreVersion(videoId, number),
+			onSuccess: saved,
 		}),
 		pickMusic: useMutation({ mutationFn: () => videosService.pickMusic(videoId) }),
 		generateVoice: useMutation({

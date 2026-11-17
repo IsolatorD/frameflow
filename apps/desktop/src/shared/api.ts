@@ -9,6 +9,7 @@ import type {
 } from "@frameflow/core/project";
 import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
 import type { LlmStatus } from "@frameflow/core/script/ai";
+import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 
 /** Resultado de una llamada IPC: errores como dato, no como excepción (mensajes limpios). */
@@ -37,6 +38,9 @@ export type FrameflowApi = {
 		create(input: CreateVideoInput): Promise<IpcResult<VideoDetail>>;
 		saveScript(id: string, script: Script): Promise<IpcResult<VideoDetail>>;
 		saveSettings(id: string, settings: VideoSettings): Promise<IpcResult<VideoDetail>>;
+		editTimeline(id: string, edit: TimelineEdit): Promise<IpcResult<VideoDetail>>;
+		saveCaptions(id: string, sceneId: string, words: CaptionEdit): Promise<IpcResult<VideoDetail>>;
+		restoreVersion(id: string, number: number): Promise<IpcResult<VideoDetail>>;
 		/** Abre el selector de archivos y copia la música al proyecto; null si se cancela. */
 		pickMusic(id: string): Promise<IpcResult<MusicSettings | null>>;
 		generateVoice(id: string): Promise<IpcResult<void>>;
@@ -62,6 +66,9 @@ export const IPC = {
 	videosCreate: "videos:create",
 	videosSaveScript: "videos:save-script",
 	videosSaveSettings: "videos:save-settings",
+	videosEditTimeline: "videos:edit-timeline",
+	videosSaveCaptions: "videos:save-captions",
+	videosRestoreVersion: "videos:restore-version",
 	videosPickMusic: "videos:pick-music",
 	videosGenerateVoice: "videos:generate-voice",
 	videosRender: "videos:render",

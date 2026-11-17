@@ -1,6 +1,7 @@
 import { BUILT_IN_PRESETS } from "@frameflow/core/presets";
 import type { BrandKit, CreateProjectInput } from "@frameflow/core/project";
 import type { Script, VideoSettings } from "@frameflow/core/script";
+import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { CreateVideoInput } from "@frameflow/core/video";
 import type { ProjectsRepository } from "@frameflow/db/projects";
 import type { VideosRepository } from "@frameflow/db/videos";
@@ -60,6 +61,17 @@ export function registerIpcHandlers(deps: {
 	);
 	ipcMain.handle(IPC.videosSaveSettings, (_e, id: unknown, settings: unknown) =>
 		wrap(() => pipeline.saveSettings(uuid(id), settings as VideoSettings)),
+	);
+	ipcMain.handle(IPC.videosEditTimeline, (_e, id: unknown, edit: unknown) =>
+		wrap(() => pipeline.editTimeline(uuid(id), edit as TimelineEdit)),
+	);
+	ipcMain.handle(IPC.videosSaveCaptions, (_e, id: unknown, sceneId: unknown, words: unknown) =>
+		wrap(() =>
+			pipeline.saveCaptions(uuid(id), z.string().min(1).parse(sceneId), words as CaptionEdit),
+		),
+	);
+	ipcMain.handle(IPC.videosRestoreVersion, (_e, id: unknown, number: unknown) =>
+		wrap(() => pipeline.restoreVersion(uuid(id), z.number().int().positive().parse(number))),
 	);
 	ipcMain.handle(IPC.videosPickMusic, (event, id: unknown) =>
 		wrap(async () => {

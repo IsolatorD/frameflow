@@ -22,3 +22,6 @@ export const formatClock = (seconds: number) => {
 	const s = Math.max(0, Math.floor(seconds));
 	return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
+
+/** Ajusta a décimas de segundo (la precisión que tiene sentido al arrastrar). */
+export const snap = (seconds: number) => Math.round(seconds * 10) / 10;

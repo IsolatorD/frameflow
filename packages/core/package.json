@@ -13,7 +13,8 @@
 		"./script": "./src/script/script.ts",
 		"./script/ai": "./src/script/ai.ts",
 		"./video": "./src/video/video.ts",
-		"./script/quality": "./src/script/quality.ts"
+		"./script/quality": "./src/script/quality.ts",
+		"./script/edit": "./src/script/edit.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

@@ -10,7 +10,14 @@ export const themeSchema = z.object({
 	muted: z.string(),
 });
 
-export const wordSchema = z.object({ text: z.string(), start: z.number(), end: z.number() });
+export const wordSchema = z.object({
+	/** Palabra tal como se locuta (coincide con la narración). */
+	text: z.string(),
+	start: z.number(),
+	end: z.number(),
+	/** Cómo se muestra en el subtítulo si difiere (p. ej. "8 min" para "ocho minutos"). */
+	display: z.string().optional(),
+});
 
 export const formatSchema = z.enum(["9:16", "16:9"]);
 

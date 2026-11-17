@@ -186,6 +186,19 @@ export const createVideosRepository = (db: Database) => {
 			return detail;
 		},
 
+		/** Storyboard de una versión concreta (para restaurarla). */
+		async getVersion(videoId: string, number: number): Promise<Storyboard | null> {
+			const variant = await db.query.variants.findFirst({ where: eq(variants.videoId, videoId) });
+			if (!variant) return null;
+			const version = await db.query.storyboardVersions.findFirst({
+				where: and(
+					eq(storyboardVersions.variantId, variant.id),
+					eq(storyboardVersions.number, number),
+				),
+			});
+			return version?.storyboard ?? null;
+		},
+
 		async setStatus(videoId: string, status: VideoStatus, error: string | null = null) {
 			await db.update(videos).set({ status, error, updatedAt: now }).where(eq(videos.id, videoId));
 		},

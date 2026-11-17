@@ -50,7 +50,7 @@ export const captionWords = (sb: Storyboard): Word[] =>
 					(w) => w.start >= clip.trimStart - EPSILON && w.start < clip.trimStart + clip.duration,
 				)
 				.map((w) => ({
-					text: w.text,
+					text: w.display?.trim() || w.text,
 					start: w.start + offset,
 					end: Math.min(w.end + offset, clipEnd(clip)),
 				}));

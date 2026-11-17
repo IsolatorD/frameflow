@@ -139,9 +139,23 @@ const musicOf = (sb: Storyboard | undefined): MusicSettings | null => {
 		: null;
 };
 
-const ctaOf = (sb: Storyboard | undefined): string => {
+const ctaClipOf = (sb: Storyboard | undefined): TextClip | undefined => {
 	const clip = sb?.tracks.find((t) => t.id === TRACK_IDS.cta)?.clips[0];
-	return clip?.type === "text" ? clip.text : "";
+	return clip?.type === "text" ? clip : undefined;
+};
+const ctaOf = (sb: Storyboard | undefined): string => ctaClipOf(sb)?.text ?? "";
+
+export const CTA_DEFAULT_SECONDS = 2.5;
+export const CTA_SECONDS_RANGE = { min: 1, max: 10 } as const;
+
+/** Duración de la llamada a la acción y hueco hasta el final del video (se conservan al editar). */
+const ctaTimingOf = (sb: Storyboard | undefined) => {
+	const clip = ctaClipOf(sb);
+	if (!sb || !clip) return { duration: CTA_DEFAULT_SECONDS, endGap: 0 };
+	const total = sb.tracks
+		.flatMap((t): Clip[] => t.clips)
+		.reduce((m, c) => Math.max(m, c.start + c.duration), 0);
+	return { duration: clip.duration, endGap: Math.max(0, total - (clip.start + clip.duration)) };
 };
 
 /** Ids de las escenas que tienen la voz al día. */
@@ -301,11 +315,13 @@ export const assembleStoryboard = (input: {
 
 	const cta = (input.ctaText ?? ctaOf(input.previous)).trim();
 	if (cta && total >= 3) {
+		const timing = ctaTimingOf(input.previous);
+		const duration = Math.min(timing.duration, total);
 		const clip: TextClip = {
 			type: "text",
 			id: "cta",
-			start: Math.max(0, total - 2.5),
-			duration: Math.min(2.5, total),
+			start: Math.max(0, total - Math.min(timing.endGap, total - duration) - duration),
+			duration,
 			text: cta,
 			// Por encima de la franja de subtítulos (abajo, ~12 % de la altura) para no taparlos.
 			transform: { x: 0.5, y: CTA_Y, scale: 1, rotation: 0, opacity: 1 },

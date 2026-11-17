@@ -16,6 +16,12 @@ import {
 	voicedSceneIds,
 } from "@frameflow/core/script";
 import { generateScript, type LlmStatus, type OllamaProvider } from "@frameflow/core/script/ai";
+import {
+	applyTimelineEdit,
+	type CaptionEdit,
+	type TimelineEdit,
+	updateCaptions,
+} from "@frameflow/core/script/edit";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import {
 	type CreateVideoInput,
@@ -295,6 +301,30 @@ export function createVideoPipeline(deps: Deps) {
 			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
 			const video = await loadVideo(videoId);
 			const sb = applyVideoSettings(video.storyboard, settings);
+			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
+		},
+
+		/** Arrastrar o recortar en la línea de tiempo. */
+		async editTimeline(videoId: string, edit: TimelineEdit): Promise<VideoDetail> {
+			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
+			const video = await loadVideo(videoId);
+			const sb = applyTimelineEdit(video.storyboard, edit);
+			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
+		},
+
+		/** Corrige texto mostrado y tiempos de los subtítulos de una escena. */
+		async saveCaptions(videoId: string, sceneId: string, words: CaptionEdit): Promise<VideoDetail> {
+			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
+			const video = await loadVideo(videoId);
+			const sb = updateCaptions(video.storyboard, sceneId, words);
+			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
+		},
+
+		/** Vuelve a una versión anterior guardándola como versión nueva (nada se pierde). */
+		async restoreVersion(videoId: string, number: number): Promise<VideoDetail> {
+			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
+			const sb = await deps.videos.getVersion(videoId, number);
+			if (!sb) throw new Error(`No existe la versión ${number}`);
 			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
 		},
 

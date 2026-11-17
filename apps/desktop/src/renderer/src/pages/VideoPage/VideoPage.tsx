@@ -6,6 +6,7 @@ import {
 	scriptFromStoryboard,
 	videoSettingsFromStoryboard,
 } from "@frameflow/core/script";
+import { findClip } from "@frameflow/core/storyboard/timeline";
 import { Badge } from "@frameflow/ui/src/atoms/Badge/Badge";
 import { Button } from "@frameflow/ui/src/atoms/Button/Button";
 import { ProgressBar } from "@frameflow/ui/src/atoms/ProgressBar/ProgressBar";
@@ -14,16 +15,18 @@ import { EmptyState } from "@frameflow/ui/src/molecules/EmptyState/EmptyState";
 import { Section } from "@frameflow/ui/src/molecules/Section/Section";
 import { StepIndicator } from "@frameflow/ui/src/molecules/StepIndicator/StepIndicator";
 import { Tabs } from "@frameflow/ui/src/molecules/Tabs/Tabs";
+import { CaptionEditor } from "@frameflow/ui/src/organisms/CaptionEditor/CaptionEditor";
 import { ScriptEditor } from "@frameflow/ui/src/organisms/ScriptEditor/ScriptEditor";
 import { VideoSettingsPanel } from "@frameflow/ui/src/organisms/VideoSettingsPanel/VideoSettingsPanel";
 import { AppShell } from "@frameflow/ui/src/templates/AppShell/AppShell";
 import type { PlayerRef } from "@remotion/player";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router";
 import { useJobEvents } from "../../hooks/useJobEvents/useJobEvents";
 import { useMediaBaseUrl } from "../../hooks/useMediaBaseUrl/useMediaBaseUrl";
 import { useProject } from "../../hooks/useProject/useProject";
 import { useProjects } from "../../hooks/useProjects/useProjects";
+import { useVersionHistory } from "../../hooks/useVersionHistory/useVersionHistory";
 import { useVideo } from "../../hooks/useVideo/useVideo";
 import { useVideoActions } from "../../hooks/useVideoActions/useVideoActions";
 import { projectsNavGroup } from "../../utils/navigation/navigation";
@@ -33,6 +36,7 @@ import { SECTIONS } from "../ProjectPage/ProjectPage.constants";
 import { StoryboardPreview } from "./StoryboardPreview/StoryboardPreview";
 import {
 	BUSY_MESSAGE,
+	captionScenesOf,
 	formatBytes,
 	isBusy,
 	renderIsCurrent,
@@ -54,9 +58,10 @@ export function VideoPage() {
 	const job = useJobEvents(videoId);
 	const [scriptDirty, setScriptDirty] = useState(false);
 	const [settingsDirty, setSettingsDirty] = useState(false);
-	const dirty = scriptDirty || settingsDirty;
+	const [captionsDirty, setCaptionsDirty] = useState(false);
+	const dirty = scriptDirty || settingsDirty || captionsDirty;
 	const blocker = useBlocker(dirty);
-	const [tab, setTab] = useState<"script" | "settings">("script");
+	const [tab, setTab] = useState<"script" | "settings" | "captions">("script");
 	const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 	const [focusSceneId, setFocusSceneId] = useState<string | null>(null);
 	const playerRef = useRef<PlayerRef>(null);
@@ -69,6 +74,31 @@ export function VideoPage() {
 		() => (video.data ? videoSettingsFromStoryboard(video.data.storyboard) : null),
 		[video.data],
 	);
+	// Memorizado: el editor de subtítulos reinicia su borrador cuando cambian las escenas.
+	const captionScenes = useMemo(
+		() => (video.data ? captionScenesOf(video.data.storyboard) : []),
+		[video.data],
+	);
+
+	const history = useVersionHistory(videoId, video.data?.versionNumber, (n) =>
+		actions.restoreVersion.mutateAsync(n),
+	);
+	const canEdit = Boolean(video.data && !isBusy(video.data) && !dirty);
+
+	// ⌘Z / ⇧⌘Z (Ctrl en Windows/Linux) fuera de los campos de texto, que tienen su propio deshacer.
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") return;
+			const target = event.target as HTMLElement | null;
+			if (target?.closest("input, textarea, select, [contenteditable]")) return;
+			if (!canEdit) return;
+			event.preventDefault();
+			if (event.shiftKey) history.redo();
+			else history.undo();
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [canEdit, history]);
 
 	const nav = [
 		projectsNavGroup(projects.data ?? [], navigate, projectId),
@@ -107,7 +137,9 @@ export function VideoPage() {
 	const actionError =
 		actions.generateVoice.error?.message ??
 		actions.render.error?.message ??
-		actions.openRender.error?.message;
+		actions.openRender.error?.message ??
+		actions.editTimeline.error?.message ??
+		actions.restoreVersion.error?.message;
 
 	return (
 		<AppShell
@@ -115,7 +147,33 @@ export function VideoPage() {
 			eyebrow={project.data?.name}
 			title={data.title}
 			subtitle={data.topic !== data.title ? data.topic : undefined}
-			actions={<StepIndicator steps={videoSteps(data)} />}
+			actions={
+				<div className="flex items-center gap-4">
+					<div className="flex gap-1">
+						<Button
+							variant="ghost"
+							aria-label="Deshacer"
+							title={dirty ? "Guarda o descarta los cambios para deshacer" : "Deshacer (⌘Z)"}
+							disabled={!history.canUndo || !canEdit || actions.restoreVersion.isPending}
+							onClick={history.undo}
+							className="px-2.5"
+						>
+							Deshacer
+						</Button>
+						<Button
+							variant="ghost"
+							aria-label="Rehacer"
+							title={dirty ? "Guarda o descarta los cambios para rehacer" : "Rehacer (⇧⌘Z)"}
+							disabled={!history.canRedo || !canEdit || actions.restoreVersion.isPending}
+							onClick={history.redo}
+							className="px-2.5"
+						>
+							Rehacer
+						</Button>
+					</div>
+					<StepIndicator steps={videoSteps(data)} />
+				</div>
+			}
 		>
 			<div className="flex flex-col gap-4">
 				{media.data && project.data && data.status !== "scripting" ? (
@@ -124,6 +182,8 @@ export function VideoPage() {
 						voicedSceneIds={data.voicedSceneIds}
 						playerRef={playerRef}
 						selectedClipId={selectedClipId}
+						onEdit={(edit) => actions.editTimeline.mutate(edit)}
+						disabled={!canEdit || actions.editTimeline.isPending}
 						onSelect={(clipId, target) => {
 							setSelectedClipId(clipId);
 							if (target.kind === "scene") {
@@ -151,6 +211,7 @@ export function VideoPage() {
 										label: "Ajustes del video",
 										badge: settingsDirty ? "●" : undefined,
 									},
+									{ id: "captions", label: "Subtítulos", badge: captionsDirty ? "●" : undefined },
 								]}
 								active={tab}
 								onChange={(id) => setTab(id as typeof tab)}
@@ -196,6 +257,31 @@ export function VideoPage() {
 									onDirtyChange={setSettingsDirty}
 									saving={actions.saveSettings.isPending}
 									serverError={actions.saveSettings.error?.message}
+									locked={busy}
+								/>
+							</div>
+							<div
+								id="video-edit-panel-captions"
+								role="tabpanel"
+								aria-labelledby="video-edit-tab-captions"
+								hidden={tab !== "captions"}
+							>
+								<CaptionEditor
+									scenes={captionScenes}
+									onSave={(sceneId, words) =>
+										actions.saveCaptions.mutate({
+											sceneId,
+											words: words.map(({ start, end, display }) => ({ start, end, display })),
+										})
+									}
+									onPlay={(sceneId, seconds) => {
+										const start = findClip(data.storyboard, `voice-${sceneId}`)?.clip.start ?? 0;
+										playerRef.current?.seekTo(Math.round((start + seconds) * data.storyboard.fps));
+										playerRef.current?.play();
+									}}
+									onDirtyChange={setCaptionsDirty}
+									saving={actions.saveCaptions.isPending}
+									serverError={actions.saveCaptions.error?.message}
 									locked={busy}
 								/>
 							</div>
