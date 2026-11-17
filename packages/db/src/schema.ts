@@ -186,9 +186,10 @@ export const publications = sqliteTable("publications", {
 	renderId: text("render_id")
 		.notNull()
 		.references(() => renders.id),
-	socialAccountId: text("social_account_id")
-		.notNull()
-		.references(() => socialAccounts.id),
+	/** Cuenta por la que se publica (modo api). En modo manual (exportar y subir a mano) puede faltar. */
+	socialAccountId: text("social_account_id").references(() => socialAccounts.id),
+	/** Red de destino (en modo manual no hay cuenta de la que sacarla). */
+	platform: text("platform").$type<Platform>(),
 	mode: text("mode").$type<"api" | "manual">().notNull(),
 	status: text("status").$type<PublicationStatus>().notNull().default("draft"),
 	title: text("title").notNull(),
@@ -200,6 +201,9 @@ export const publications = sqliteTable("publications", {
 	externalPostId: text("external_post_id"),
 	url: text("url"),
 	error: text("error"),
+	/** Carpeta con el MP4, la portada y el texto (modo manual). */
+	exportPath: text("export_path"),
+	updatedAt: text("updated_at"),
 });
 
 // ── Métricas (series temporales) ─────────────────────────────────────────

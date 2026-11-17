@@ -3,7 +3,7 @@
 Estudio de escritorio para crear y gestionar canales de videos animados cortos: cada **proyecto es un
 canal** con su marca, sus videos, sus cuentas sociales y sus estadísticas.
 
-Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md)
+Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md) · [docs/07-exportar.md](docs/07-exportar.md)
 
 ## Estructura
 
@@ -11,7 +11,7 @@ Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-mo
 apps/
   desktop/              App Electron (main: BD e IPC · preload: puente · renderer: React)
 packages/
-  core/                 Dominio puro: storyboard v2, guion + IA, voz (fonemas, tiempos), presets, proyectos, videos
+  core/                 Dominio puro: storyboard v2, guion + IA, voz (fonemas, tiempos), publicar, presets, proyectos, videos
   db/                   SQLite con Drizzle (libsql): esquema, migraciones, repositorios
   ui/                   Componentes React (atoms → molecules → organisms → templates)
   renderer-remotion/    Motor de render: storyboard → MP4 con Remotion (también la vista previa)

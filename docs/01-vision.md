@@ -22,7 +22,7 @@ Primero para uso propio; más adelante, compartible con otros creadores.
 | Plataforma      | **Híbrida**: escritorio primero (Electron); monorepo con `core`/`ui` reutilizables para una web futura; servicio cloud pequeño más adelante (OAuth, programación, métricas) |
 | Motor de video  | **Remotion** (React → MP4), validado con prototipo; render aislado tras el storyboard para poder cambiar (p. ej. HyperFrames)                                               |
 | Eje del sistema | **Proyecto = canal** (Astroinfo…): marca, generación, biblioteca, cuentas, publicación y estadísticas                                                                       |
-| Redes           | Fase 1 exportar con metadatos · 2 YouTube · 3 Instagram/Facebook · 4 TikTok                                                                                                 |
+| Redes           | Fase 1 exportar con metadatos (hecha, docs/07) · 2 YouTube · 3 Instagram/Facebook · 4 TikTok                                                                                |
 
 ## Arquitectura conceptual
 

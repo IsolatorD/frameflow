@@ -2,6 +2,7 @@
 // La interfaz nunca toca la BD: pide cosas por IPC a través de `window.frameflow`.
 import type { AiSettings, AiSettingsView, CloudProviderId } from "@frameflow/core/ai/catalog";
 import type { LocalAiState } from "@frameflow/core/ai/localRuntime";
+import type { PlatformId } from "@frameflow/core/catalog";
 import type { NichePreset } from "@frameflow/core/presets";
 import type {
 	BrandKit,
@@ -9,12 +10,18 @@ import type {
 	ProjectSummary,
 	ProjectWithBrand,
 } from "@frameflow/core/project";
+import type { PostDraft, PublicationView } from "@frameflow/core/publish";
 import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
 import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { NewOverlay, OverlayOp } from "@frameflow/core/script/overlays";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 import type { UpdateState } from "./updates";
+
+/** Pestaña "Publicar": el texto de cada red (guardado o de partida) y su publicación. */
+export type PublishOverview = {
+	items: { platform: PlatformId; post: PostDraft; publication: PublicationView | null }[];
+};
 
 /** Resultado de una llamada IPC: errores como dato, no como excepción (mensajes limpios). */
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -82,6 +89,30 @@ export type FrameflowApi = {
 		/** Abre el último MP4 en el reproductor del sistema, o lo muestra en el Finder. */
 		openRender(id: string, how: "open" | "reveal"): Promise<IpcResult<void>>;
 	};
+	/** Exportar para redes: texto por red, carpeta lista para subir y registro de lo publicado. */
+	publish: {
+		overview(videoId: string): Promise<IpcResult<PublishOverview>>;
+		saveDraft(
+			videoId: string,
+			platform: PlatformId,
+			post: PostDraft,
+		): Promise<IpcResult<PublicationView>>;
+		export(
+			videoId: string,
+			platform: PlatformId,
+			post: PostDraft,
+		): Promise<IpcResult<PublicationView>>;
+		/** La IA de Ajustes reescribe el texto de todas las redes. */
+		improve(videoId: string): Promise<IpcResult<PublishOverview>>;
+		/** Pega el enlace del post publicado (null = deshacer). */
+		markPublished(
+			videoId: string,
+			platform: PlatformId,
+			url: string | null,
+		): Promise<IpcResult<PublicationView>>;
+		openUpload(platform: PlatformId): Promise<IpcResult<void>>;
+		reveal(path: string): Promise<IpcResult<void>>;
+	};
 	/** Suscripción al progreso de tareas largas; devuelve la función para darse de baja. */
 	onJobEvent(listener: (event: JobEvent) => void): () => void;
 };
@@ -122,5 +153,12 @@ export const IPC = {
 	videosRender: "videos:render",
 	videosCancel: "videos:cancel",
 	videosOpenRender: "videos:open-render",
+	publishOverview: "publish:overview",
+	publishSaveDraft: "publish:save-draft",
+	publishExport: "publish:export",
+	publishImprove: "publish:improve",
+	publishMarkPublished: "publish:mark-published",
+	publishOpenUpload: "publish:open-upload",
+	publishReveal: "publish:reveal",
 	jobEvent: "jobs:event",
 } as const;

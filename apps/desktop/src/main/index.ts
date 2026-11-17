@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { DatabaseFromNewerVersionError, openDatabase } from "@frameflow/db/client";
 import { createProjectsRepository } from "@frameflow/db/projects";
+import { createPublicationsRepository } from "@frameflow/db/publications";
 import { createVideosRepository } from "@frameflow/db/videos";
 import { app, BrowserWindow, dialog, shell } from "electron";
 import { IPC } from "../shared/api";
@@ -10,6 +11,7 @@ import { registerIpcHandlers } from "./ipc/registerIpcHandlers";
 import { createAiSettingsStore } from "./services/aiSettings";
 import { createLocalAi } from "./services/localAi/localAi";
 import { startMediaServer } from "./services/mediaServer";
+import { createPublisher } from "./services/publish";
 import { createUpdates } from "./services/updates";
 import { createVideoPipeline } from "./services/videoPipeline";
 import { createVoiceEngine } from "./services/voice/kokoro";
@@ -143,7 +145,17 @@ app.whenReady().then(async () => {
 				window.webContents.send(IPC.updatesEvent, state);
 		},
 	});
+	const publisher = createPublisher({
+		dataDir,
+		projects,
+		videos,
+		publications: createPublicationsRepository(db),
+		remotion,
+		mediaBaseUrl: media.baseUrl,
+		llm: () => ai.current(),
+	});
 	registerIpcHandlers({
+		publisher,
 		projects,
 		videos,
 		pipeline,

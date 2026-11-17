@@ -1,6 +1,7 @@
 import { PROVIDERS } from "@frameflow/core/ai/catalog";
 import { BUILT_IN_PRESETS } from "@frameflow/core/presets";
 import type { BrandKit, CreateProjectInput } from "@frameflow/core/project";
+import { postDraftSchema } from "@frameflow/core/publish";
 import type { Script, VideoSettings } from "@frameflow/core/script";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { OverlayOp } from "@frameflow/core/script/overlays";
@@ -12,6 +13,7 @@ import { z } from "zod";
 import { IPC, type IpcResult } from "../../shared/api";
 import type { AiSettingsStore } from "../services/aiSettings";
 import type { LocalAi } from "../services/localAi/localAi";
+import type { Publisher } from "../services/publish";
 import type { Updates } from "../services/updates";
 import {
 	IMAGE_EXTENSIONS,
@@ -45,11 +47,37 @@ export function registerIpcHandlers(deps: {
 	ai: AiSettingsStore;
 	localAi: LocalAi;
 	updates: Updates;
+	publisher: Publisher;
 	mediaBaseUrl: string;
 }): void {
-	const { projects, videos, pipeline, ai, localAi, updates } = deps;
+	const { projects, videos, pipeline, ai, localAi, updates, publisher } = deps;
 
 	ipcMain.handle(IPC.appMediaBaseUrl, () => wrap(() => deps.mediaBaseUrl));
+	const platform = (value: unknown) =>
+		z.enum(["youtube", "instagram", "tiktok", "facebook"]).parse(value);
+	ipcMain.handle(IPC.publishOverview, (_e, id: unknown) =>
+		wrap(() => publisher.overview(uuid(id))),
+	);
+	ipcMain.handle(IPC.publishSaveDraft, (_e, id: unknown, p: unknown, post: unknown) =>
+		wrap(() => publisher.saveDraft(uuid(id), platform(p), postDraftSchema.parse(post))),
+	);
+	ipcMain.handle(IPC.publishExport, (_e, id: unknown, p: unknown, post: unknown) =>
+		wrap(() => publisher.export(uuid(id), platform(p), postDraftSchema.parse(post))),
+	);
+	ipcMain.handle(IPC.publishImprove, (_e, id: unknown) =>
+		wrap(() => publisher.improveWithAi(uuid(id))),
+	);
+	ipcMain.handle(IPC.publishMarkPublished, (_e, id: unknown, p: unknown, url: unknown) =>
+		wrap(() =>
+			publisher.markPublished(uuid(id), platform(p), url === null ? null : z.string().parse(url)),
+		),
+	);
+	ipcMain.handle(IPC.publishOpenUpload, (_e, p: unknown) =>
+		wrap(() => publisher.openUpload(platform(p))),
+	);
+	ipcMain.handle(IPC.publishReveal, (_e, path: unknown) =>
+		wrap(() => publisher.reveal(z.string().parse(path))),
+	);
 	ipcMain.handle(IPC.updatesState, () => wrap(() => updates.state()));
 	ipcMain.handle(IPC.updatesCheck, () => wrap(() => updates.check()));
 	ipcMain.handle(IPC.updatesDownload, () => wrap(() => updates.download()));

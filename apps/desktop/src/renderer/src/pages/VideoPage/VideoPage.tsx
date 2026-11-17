@@ -49,6 +49,7 @@ import {
 	writeBack,
 } from "./OverlaysSection/OverlaysSection.constants";
 import { PreviewOverlayEditor } from "./PreviewOverlayEditor/PreviewOverlayEditor";
+import { PublishSection } from "./PublishSection/PublishSection";
 import { StoryboardPreview } from "./StoryboardPreview/StoryboardPreview";
 import {
 	BUSY_MESSAGE,
@@ -81,7 +82,9 @@ export function VideoPage() {
 	const dirty = scriptDirty || settingsDirty || captionsDirty || overlayDraft !== null;
 	const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
 	const blocker = useBlocker(dirty);
-	const [tab, setTab] = useState<"script" | "settings" | "captions" | "layers">("script");
+	const [tab, setTab] = useState<"script" | "settings" | "captions" | "layers" | "publish">(
+		"script",
+	);
 	const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 	const [focusSceneId, setFocusSceneId] = useState<string | null>(null);
 	const playerRef = useRef<PlayerRef>(null);
@@ -328,6 +331,7 @@ export function VideoPage() {
 									},
 									{ id: "captions", label: "Subtítulos", badge: captionsDirty ? "●" : undefined },
 									{ id: "layers", label: "Capas", badge: overlayDraft ? "●" : undefined },
+									{ id: "publish", label: "Publicar" },
 								]}
 								active={tab}
 								onChange={(id) => setTab(id as typeof tab)}
@@ -486,6 +490,14 @@ export function VideoPage() {
 									error={actions.editOverlays.error?.message ?? actions.pickMedia.error?.message}
 									locked={busy}
 								/>
+							</div>
+							<div
+								id="video-edit-panel-publish"
+								role="tabpanel"
+								aria-labelledby="video-edit-tab-publish"
+								hidden={tab !== "publish"}
+							>
+								{tab === "publish" ? <PublishSection video={data} /> : null}
 							</div>
 						</div>
 					)}

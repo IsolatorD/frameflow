@@ -22,7 +22,8 @@
 		"./ai/localRuntime": "./src/ai/localRuntime.ts",
 		"./voice/phonemes": "./src/voice/phonemes.ts",
 		"./voice/timing": "./src/voice/timing.ts",
-		"./voice/kokoroModel": "./src/voice/kokoroModel.ts"
+		"./voice/kokoroModel": "./src/voice/kokoroModel.ts",
+		"./publish": "./src/publish/publish.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

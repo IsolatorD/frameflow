@@ -62,6 +62,18 @@ const api: FrameflowApi = {
 		cancel: (id) => ipcRenderer.invoke(IPC.videosCancel, id),
 		openRender: (id, how) => ipcRenderer.invoke(IPC.videosOpenRender, id, how),
 	},
+	publish: {
+		overview: (videoId) => ipcRenderer.invoke(IPC.publishOverview, videoId),
+		saveDraft: (videoId, platform, post) =>
+			ipcRenderer.invoke(IPC.publishSaveDraft, videoId, platform, post),
+		export: (videoId, platform, post) =>
+			ipcRenderer.invoke(IPC.publishExport, videoId, platform, post),
+		improve: (videoId) => ipcRenderer.invoke(IPC.publishImprove, videoId),
+		markPublished: (videoId, platform, url) =>
+			ipcRenderer.invoke(IPC.publishMarkPublished, videoId, platform, url),
+		openUpload: (platform) => ipcRenderer.invoke(IPC.publishOpenUpload, platform),
+		reveal: (path) => ipcRenderer.invoke(IPC.publishReveal, path),
+	},
 	onJobEvent: (listener) => {
 		const handler = (_event: IpcRendererEvent, payload: JobEvent) => listener(payload);
 		ipcRenderer.on(IPC.jobEvent, handler);

@@ -58,6 +58,63 @@ describe("abrir la base de datos", () => {
 		expect(Number(rows.rows[0]?.n)).toBe(1);
 	});
 
+	it("la migración de publicaciones conserva las que ya había", async () => {
+		const { createProjectsRepository } = await import("./repositories/projectsRepository");
+		const { createVideosRepository } = await import("./repositories/videosRepository");
+		const { assembleStoryboard, starterScript } = await import("@frameflow/core/script");
+		// Base en la versión anterior (2 migraciones) con una publicación de una cuenta conectada.
+		const old = await openDatabase(url(), migrationsUpTo(2));
+		const project = await createProjectsRepository(old).create({
+			name: "Astroinfo",
+			presetId: "ciencia",
+			languages: ["es"],
+		});
+		const videos = createVideosRepository(old);
+		const video = await videos.create({
+			projectId: project.id,
+			topic: "luz",
+			mode: "stepwise",
+			status: "draft",
+			storyboard: assembleStoryboard({
+				script: starterScript("luz"),
+				language: "es",
+				format: "9:16",
+				style: {
+					theme: { background: "#000000", text: "#FFFFFF", accent: "#FAC775", muted: "#888888" },
+					fontFamily: "Montserrat",
+					captions: { enabled: true, maxWordsPerPage: 4 },
+				},
+			}),
+			source: "manual",
+		});
+		const render = await videos.createRender(video.id);
+		await old.$client.execute({
+			sql: `INSERT INTO social_accounts (id, project_id, platform, external_id, handle, display_name, status, scopes, token_ref)
+				VALUES ('acc', ?, 'youtube', 'ext', '@astro', 'Astro', 'connected', '[]', 'ref')`,
+			args: [project.id],
+		});
+		await old.$client.execute({
+			sql: `INSERT INTO publications (id, render_id, social_account_id, mode, title, hashtags)
+				VALUES ('pub', ?, 'acc', 'api', 'Título', '["#luz"]')`,
+			args: [render.id],
+		});
+		old.$client.close();
+
+		const db = await openDatabase(url(), MIGRATIONS);
+		const rows = await db.$client.execute(
+			"SELECT id, social_account_id, platform, title, hashtags FROM publications",
+		);
+		db.$client.close();
+		expect(rows.rows).toHaveLength(1);
+		expect(rows.rows[0]).toMatchObject({
+			id: "pub",
+			social_account_id: "acc",
+			platform: null,
+			title: "Título",
+			hashtags: '["#luz"]',
+		});
+	});
+
 	it("no toca una base creada por una versión más nueva", async () => {
 		const db = await openDatabase(url(), MIGRATIONS);
 		db.$client.close();

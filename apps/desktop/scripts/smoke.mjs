@@ -489,6 +489,11 @@ try {
 	await page.screenshot({ path: join(shots, "11d-capas.png") });
 	await page.getByRole("tab", { name: /Guion y escenas/ }).click();
 
+	// Publicar: sin MP4 todavía, la pestaña explica qué falta.
+	await page.getByRole("tab", { name: "Publicar" }).click();
+	await page.getByText("Primero crea el video").waitFor();
+	await page.getByRole("tab", { name: /Guion y escenas/ }).click();
+
 	// Prueba completa (voz real con Kokoro + render MP4): solo con SMOKE_FULL=1, tarda minutos.
 	if (process.env.SMOKE_FULL) {
 		await page.getByRole("button", { name: "Generar voz" }).click();
@@ -545,6 +550,41 @@ try {
 		await page.getByRole("button", { name: "Ver video" }).waitFor({ timeout: 600_000 });
 		await page.waitForTimeout(500);
 		await page.screenshot({ path: join(shots, "12-video-listo.png") });
+
+		// Publicar: texto de cada red, comprobaciones, exportar (MP4 + portada + texto) y publicado.
+		await page.getByRole("tab", { name: "Publicar" }).click();
+		const ytTitle = page.getByLabel("Título", { exact: true });
+		await ytTitle.waitFor();
+		expect((await ytTitle.inputValue()).length > 0, "YouTube debería traer el título del video");
+		await ytTitle.fill("x".repeat(110));
+		await page.getByText(/El título tiene 110 caracteres/).waitFor();
+		expect(
+			await page.getByRole("button", { name: "Exportar" }).isDisabled(),
+			"Con errores no se debe poder exportar",
+		);
+		await ytTitle.fill("Por qué el cielo es azul");
+		await page.getByLabel("Hashtags").fill("#ciencia #cielo azul");
+		await page.getByText(/^3 · se recomiendan 3 o menos/).waitFor();
+		await page.getByRole("button", { name: "Exportar" }).click();
+		await page.getByRole("button", { name: "Mostrar carpeta" }).waitFor({ timeout: 300_000 });
+		const exportDir = join(home, "projects/astroinfo/exports/por-que-el-cielo-es-azul/youtube");
+		for (const file of ["por-que-el-cielo-es-azul.mp4", "portada.jpg", "texto.txt"])
+			expect(existsSync(join(exportDir, file)), `Falta ${file} en la exportación`);
+		const notes = readFileSync(join(exportDir, "texto.txt"), "utf8");
+		expect(notes.includes("#ciencia #cielo #azul"), `texto.txt sin los hashtags:\n${notes}`);
+		await page.screenshot({ path: join(shots, "19-publicar.png") });
+		await page
+			.getByLabel("¿Ya lo publicaste? Pega el enlace")
+			.fill("https://youtube.com/shorts/abc");
+		await page.getByRole("button", { name: "Marcar como publicado" }).click();
+		await page.getByText("Publicado", { exact: true }).waitFor();
+		// Las demás redes conservan su propio texto.
+		await page.getByRole("tab", { name: /TikTok/ }).click();
+		expect(
+			(await page.locator("#publish-caption-tiktok").inputValue()).length > 0,
+			"TikTok debería traer su texto",
+		);
+		await page.getByRole("tab", { name: /Guion y escenas/ }).click();
 	}
 
 	// Modo automático con IA real (guion → voz → MP4 sin pararse): solo con SMOKE_AI=1.

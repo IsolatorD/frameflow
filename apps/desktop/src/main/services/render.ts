@@ -7,6 +7,7 @@ import {
 	ensureBrowser,
 	makeCancelSignal,
 	renderMedia,
+	renderStill,
 	selectComposition,
 } from "@remotion/renderer";
 
@@ -104,4 +105,39 @@ export async function renderStoryboard(opts: {
 		durationSec: storyboardDuration(opts.storyboard),
 		...dimensionsFor(opts.storyboard.format),
 	};
+}
+
+/** Un fotograma del video como imagen (portada para las redes). */
+export async function renderFrame(opts: {
+	source: RemotionSource;
+	storyboard: Storyboard;
+	mediaBaseUrl: string;
+	/** Segundo del video que se toma. */
+	atSeconds: number;
+	outputPath: string;
+}): Promise<void> {
+	await ensureBrowser();
+	const serveUrl = await getServeUrl(opts.source);
+	const inputProps = { storyboard: opts.storyboard, mediaBaseUrl: opts.mediaBaseUrl };
+	const binaries = binariesDirectory();
+	const composition = await selectComposition({
+		serveUrl,
+		id: "Storyboard",
+		inputProps,
+		binariesDirectory: binaries,
+	});
+	const frame = Math.min(
+		composition.durationInFrames - 1,
+		Math.max(0, Math.round(opts.atSeconds * composition.fps)),
+	);
+	await renderStill({
+		serveUrl,
+		composition,
+		inputProps,
+		frame,
+		output: opts.outputPath,
+		imageFormat: "jpeg",
+		jpegQuality: 90,
+		binariesDirectory: binaries,
+	});
 }
