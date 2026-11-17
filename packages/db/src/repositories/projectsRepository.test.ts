@@ -1,8 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Database, openDatabase } from "../client";
+import { removeTempDir } from "../testing";
 import { createProjectsRepository } from "./projectsRepository";
 
 const MIGRATIONS = join(import.meta.dirname, "../../drizzle");
@@ -18,7 +19,7 @@ beforeEach(async () => {
 
 afterEach(() => {
 	db.$client.close();
-	rmSync(dir, { recursive: true, force: true });
+	removeTempDir(dir);
 });
 
 describe("projectsRepository", () => {

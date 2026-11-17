@@ -1,17 +1,10 @@
-import {
-	cpSync,
-	mkdirSync,
-	mkdtempSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DatabaseFromNewerVersionError, openDatabase } from "./client";
+import { removeTempDir } from "./testing";
 
 const MIGRATIONS = join(import.meta.dirname, "../drizzle");
 let dir: string;
@@ -19,7 +12,7 @@ let dir: string;
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), "frameflow-db-open-"));
 });
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
+afterEach(() => removeTempDir(dir));
 
 /** Copia de las migraciones con solo las N primeras (simula una versión anterior de la app). */
 function migrationsUpTo(count: number): string {

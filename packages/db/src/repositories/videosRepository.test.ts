@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assembleStoryboard, scriptFromStoryboard, starterScript } from "@frameflow/core/script";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Database, openDatabase } from "../client";
+import { removeTempDir } from "../testing";
 import { createProjectsRepository } from "./projectsRepository";
 import { createVideosRepository } from "./videosRepository";
 
@@ -17,7 +18,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
 	db.$client.close();
-	rmSync(dir, { recursive: true, force: true });
+	removeTempDir(dir);
 });
 
 const style = {

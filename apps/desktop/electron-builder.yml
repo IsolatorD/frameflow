@@ -56,6 +56,8 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
 linux:
+  # Sin esto saldría del nombre del paquete (@frameflow/desktop), que no vale como archivo.
+  executableName: frameflow
   icon: resources/icon.png
   category: AudioVideo
   target:
