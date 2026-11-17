@@ -26,6 +26,7 @@ const Content = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => {
 			return (
 				<AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: 60 }}>
 					<div
+						data-clip-box
 						style={{
 							fontSize: clip.style.fontSize,
 							fontWeight: clip.style.fontWeight,
@@ -64,7 +65,7 @@ const Content = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => {
 };
 
 export const VisualClipView = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => (
-	<ClipLayer transform={clip.transform} enter={clip.enter} exit={clip.exit}>
+	<ClipLayer clipId={clip.id} transform={clip.transform} enter={clip.enter} exit={clip.exit}>
 		<Content clip={clip} theme={theme} />
 	</ClipLayer>
 );

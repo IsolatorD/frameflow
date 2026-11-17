@@ -33,11 +33,14 @@ const effect = (transition: Transition | undefined, p: number) => {
  * Se usa dentro de un <Sequence>, así que el fotograma es relativo al inicio del clip.
  */
 export const ClipLayer = ({
+	clipId,
 	transform,
 	enter,
 	exit,
 	children,
 }: {
+	/** Marca el clip en el DOM (data-clip-id): el editor mide su caja para arrastrarlo. */
+	clipId?: string;
 	transform?: Transform;
 	enter?: Transition;
 	exit?: Transition;
@@ -51,6 +54,7 @@ export const ClipLayer = ({
 
 	return (
 		<AbsoluteFill
+			data-clip-id={clipId}
 			style={{
 				opacity: t.opacity * inFx.opacity * outFx.opacity,
 				transform: [

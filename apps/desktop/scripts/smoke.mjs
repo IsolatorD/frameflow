@@ -349,6 +349,52 @@ try {
 		(await page.locator('button[title^="test-image.png"]').count()) === 1,
 		"⌫ debería borrar la copia",
 	);
+
+	// Mover y escalar la capa de texto arrastrando sobre la vista previa.
+	await clip(/^¡Increíble!/).click(); // la selecciona y lleva el cabezal a su inicio
+	const box = page.locator('[data-preview-box="text-1"]');
+	await box.waitFor();
+	const output = (id) => page.locator(`output[for="${id}"]`).textContent();
+	const xBefore = await output("overlay-x");
+	before = await versionText();
+	await dragBy(box, -50);
+	await waitVersionAfter(before);
+	const xAfter = await output("overlay-x");
+	expect(
+		xAfter !== xBefore,
+		`Arrastrar en la vista previa no movió la capa (${xBefore} → ${xAfter})`,
+	);
+
+	const scaleBefore = await output("overlay-scale");
+	before = await versionText();
+	const handle = box.locator("[data-scale-handle]");
+	const hb = await handle.boundingBox();
+	if (!hb) throw new Error("Falta el tirador de escala");
+	await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(hb.x + 30, hb.y + 30, { steps: 6 });
+	await page.mouse.up();
+	await waitVersionAfter(before);
+	expect((await output("overlay-scale")) !== scaleBefore, "El tirador no cambió la escala");
+
+	// Arrastrar cerca del centro la pega exactamente al 50 %.
+	const preview = await page.locator('[data-preview-box="text-1"]').evaluate((el) => {
+		const r = el.parentElement?.getBoundingClientRect();
+		return r ? r.width : 0;
+	});
+	const xNow = Number.parseInt((await output("overlay-x")) ?? "50", 10) / 100;
+	before = await versionText();
+	await dragBy(box, (0.5 - xNow) * preview + 3); // 3 px de más: el ajuste al centro lo corrige
+	await waitVersionAfter(before);
+	expect(
+		(await output("overlay-x")) === "50%",
+		`No se pegó al centro: ${await output("overlay-x")}`,
+	);
+	expect(
+		(await page.locator(".bg-violet-400\\/80").count()) === 0,
+		"Las guías de centro deben desaparecer al soltar",
+	);
+
 	await page.locator("[data-scroll-container]").evaluate((el) => el.scrollTo({ top: 0 }));
 	await page.waitForTimeout(500);
 	await page.screenshot({ path: join(shots, "11d-capas.png") });

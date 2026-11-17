@@ -19,6 +19,7 @@ export function OverlaysSection({
 	playhead,
 	editOverlays,
 	pickMedia,
+	draft: pending,
 	onDraftChange,
 	saving,
 	error,
@@ -31,6 +32,8 @@ export function OverlaysSection({
 	playhead: () => number;
 	editOverlays: (op: OverlayOp) => Promise<{ clipId: string | null }>;
 	pickMedia: () => Promise<Extract<OverlayOp, { op: "add" }>["item"] | null>;
+	/** Borrador en curso de la capa seleccionada (lo comparten el inspector y la vista previa). */
+	draft: OverlayDraft | null;
 	onDraftChange: (patch: { clipId: string; draft: OverlayDraft } | null) => void;
 	saving: boolean;
 	error?: string;
@@ -50,7 +53,6 @@ export function OverlaysSection({
 	};
 	// El error ya lo muestra el inspector (estado de la mutación): aquí solo se evita el rechazo suelto.
 	const runQuietly = (op: OverlayOp) => run(op).catch(() => undefined);
-	// Estable: el inspector lo usa en un efecto (si cambiara en cada render, entraría en bucle).
 	const reportDraft = useCallback(
 		(next: OverlayDraft | null) =>
 			onDraftChange(next && selectedId ? { clipId: selectedId, draft: next } : null),
@@ -86,8 +88,11 @@ export function OverlaysSection({
 					key={selectedId}
 					value={draft}
 					colorOptions={COLOR_OPTIONS}
+					draft={pending}
 					onApply={(next) =>
-						void runQuietly({ op: "update", clipId: selectedId, patch: draftToPatch(next) })
+						void run({ op: "update", clipId: selectedId, patch: draftToPatch(next) })
+							.then(() => onDraftChange(null))
+							.catch(() => undefined)
 					}
 					onDraftChange={reportDraft}
 					onDuplicate={() => void runQuietly({ op: "duplicate", clipId: selectedId })}

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Button } from "../../atoms/Button/Button";
 import { RangeField } from "../../atoms/RangeField/RangeField";
 import { SelectField } from "../../atoms/SelectField/SelectField";
@@ -19,8 +18,9 @@ import type { OverlayDraft, OverlayInspectorProps } from "./OverlayInspectorInte
 /** Propiedades de la capa seleccionada; los cambios se ven en la vista previa antes de aplicarlos. */
 export function OverlayInspector({
 	value,
-	onApply,
+	draft: draftProp,
 	onDraftChange,
+	onApply,
 	onDuplicate,
 	onDelete,
 	colorOptions,
@@ -28,16 +28,18 @@ export function OverlayInspector({
 	serverError,
 	locked = false,
 }: OverlayInspectorProps) {
-	const [draft, setDraft] = useState<OverlayDraft>(value);
-	useEffect(() => setDraft(value), [value]);
-	const dirty = JSON.stringify(draft) !== JSON.stringify(value);
-	useEffect(() => onDraftChange?.(dirty ? draft : null), [dirty, draft, onDraftChange]);
+	const draft = draftProp ?? value;
+	const dirty = draftProp !== null && JSON.stringify(draftProp) !== JSON.stringify(value);
+	// Un borrador igual a lo guardado no es un cambio.
+	const setDraft = (next: OverlayDraft) =>
+		onDraftChange(JSON.stringify(next) === JSON.stringify(value) ? null : next);
 
-	const set = (patch: Partial<OverlayDraft>) => setDraft((d) => ({ ...d, ...patch }));
+	const set = (patch: Partial<OverlayDraft>) => setDraft({ ...draft, ...patch });
 	const setTransform = (patch: Partial<OverlayDraft["transform"]>) =>
-		setDraft((d) => ({ ...d, transform: { ...d.transform, ...patch } }));
-	const setStyle = (patch: Partial<NonNullable<OverlayDraft["style"]>>) =>
-		setDraft((d) => (d.style ? { ...d, style: { ...d.style, ...patch } } : d));
+		setDraft({ ...draft, transform: { ...draft.transform, ...patch } });
+	const setStyle = (patch: Partial<NonNullable<OverlayDraft["style"]>>) => {
+		if (draft.style) setDraft({ ...draft, style: { ...draft.style, ...patch } });
+	};
 	const textEmpty = draft.type === "text" && !draft.text?.trim();
 
 	return (
@@ -244,7 +246,7 @@ export function OverlayInspector({
 							{serverError}
 						</span>
 					) : null}
-					<Button variant="ghost" disabled={!dirty || applying} onClick={() => setDraft(value)}>
+					<Button variant="ghost" disabled={!dirty || applying} onClick={() => onDraftChange(null)}>
 						Descartar
 					</Button>
 					<Button type="submit" loading={applying} disabled={!dirty || textEmpty || locked}>

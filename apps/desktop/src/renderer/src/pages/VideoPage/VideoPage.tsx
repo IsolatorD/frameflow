@@ -36,7 +36,8 @@ import { projectPath } from "../../utils/router/router";
 import { formatDuration, VIDEO_STATUS } from "../../utils/videoStatus/videoStatus";
 import { SECTIONS } from "../ProjectPage/ProjectPage.constants";
 import { OverlaysSection } from "./OverlaysSection/OverlaysSection";
-import { draftToPatch } from "./OverlaysSection/OverlaysSection.constants";
+import { draftToPatch, overlayDraftOf } from "./OverlaysSection/OverlaysSection.constants";
+import { PreviewOverlayEditor } from "./PreviewOverlayEditor/PreviewOverlayEditor";
 import { StoryboardPreview } from "./StoryboardPreview/StoryboardPreview";
 import {
 	BUSY_MESSAGE,
@@ -73,6 +74,13 @@ export function VideoPage() {
 	const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 	const [focusSceneId, setFocusSceneId] = useState<string | null>(null);
 	const playerRef = useRef<PlayerRef>(null);
+	const previewRef = useRef<HTMLDivElement>(null);
+	// Elegir otra capa descarta el borrador de la anterior (si no, la vista previa lo seguiría mostrando).
+	const selectOverlay = (clipId: string | null) => {
+		setSelectedOverlayId(clipId);
+		setSelectedClipId(clipId);
+		setOverlayDraft((d) => (d && d.clipId !== clipId ? null : d));
+	};
 
 	const script = useMemo(
 		() => (video.data ? scriptFromStoryboard(video.data.storyboard) : null),
@@ -240,7 +248,7 @@ export function VideoPage() {
 								setFocusSceneId(target.sceneId);
 							} else if (target.kind === "overlay") {
 								setTab("layers");
-								setSelectedOverlayId(target.clipId);
+								selectOverlay(target.clipId);
 							} else setTab("settings");
 						}}
 					/>
@@ -347,13 +355,15 @@ export function VideoPage() {
 								<OverlaysSection
 									storyboard={data.storyboard}
 									selectedId={selectedOverlayId}
-									onSelect={(clipId) => {
-										setSelectedOverlayId(clipId);
-										setSelectedClipId(clipId);
-									}}
+									onSelect={selectOverlay}
 									playhead={() => (playerRef.current?.getCurrentFrame() ?? 0) / data.storyboard.fps}
 									editOverlays={(op) => actions.editOverlays.mutateAsync(op)}
 									pickMedia={() => actions.pickMedia.mutateAsync()}
+									draft={
+										overlayDraft && overlayDraft.clipId === selectedOverlayId
+											? overlayDraft.draft
+											: null
+									}
 									onDraftChange={setOverlayDraft}
 									saving={actions.editOverlays.isPending}
 									error={actions.editOverlays.error?.message ?? actions.pickMedia.error?.message}
@@ -365,11 +375,44 @@ export function VideoPage() {
 
 					<aside className="sticky top-0 flex flex-col gap-4">
 						{media.data && project.data && data.status !== "scripting" ? (
-							<StoryboardPreview
-								storyboard={previewStoryboard ?? data.storyboard}
-								mediaBaseUrl={`${media.data}/projects/${project.data.slug}`}
-								playerRef={playerRef}
-							/>
+							<div ref={previewRef} className="relative">
+								<StoryboardPreview
+									storyboard={previewStoryboard ?? data.storyboard}
+									mediaBaseUrl={`${media.data}/projects/${project.data.slug}`}
+									playerRef={playerRef}
+								/>
+								{tab === "layers" ? (
+									<PreviewOverlayEditor
+										storyboard={previewStoryboard ?? data.storyboard}
+										containerRef={previewRef}
+										playerRef={playerRef}
+										selectedId={selectedOverlayId}
+										onSelect={selectOverlay}
+										baseDraft={(clipId) =>
+											overlayDraft?.clipId === clipId
+												? overlayDraft.draft
+												: overlayDraftOf(data.storyboard, clipId)
+										}
+										onDraftChange={(clipId, draft) => {
+											selectOverlay(clipId);
+											setOverlayDraft({ clipId, draft });
+										}}
+										onCommit={(clipId, draft) =>
+											actions.editOverlays
+												.mutateAsync({ op: "update", clipId, patch: draftToPatch(draft) })
+												.then(() => setOverlayDraft(null))
+												.catch(() => undefined)
+										}
+										disabled={
+											busy ||
+											scriptDirty ||
+											settingsDirty ||
+											captionsDirty ||
+											actions.editOverlays.isPending
+										}
+									/>
+								) : null}
+							</div>
 						) : null}
 
 						<Section

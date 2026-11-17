@@ -32,10 +32,15 @@ export interface OverlayDraft {
 }
 
 export interface OverlayInspectorProps {
+	/** La capa tal como está guardada. */
 	value: OverlayDraft;
+	/**
+	 * Borrador en curso (controlado desde fuera: también lo edita arrastrar sobre la vista previa);
+	 * null = sin cambios.
+	 */
+	draft: OverlayDraft | null;
+	onDraftChange: (draft: OverlayDraft | null) => void;
 	onApply: (draft: OverlayDraft) => void;
-	/** Borrador en curso (para la vista previa en vivo); null al descartar o aplicar. */
-	onDraftChange?: (draft: OverlayDraft | null) => void;
 	onDuplicate: () => void;
 	onDelete: () => void;
 	/** Colores con nombre del tema del video (text, accent…). */

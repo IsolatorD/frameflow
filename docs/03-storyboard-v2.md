@@ -102,10 +102,14 @@ pistas `track-overlay-N` ("Capa N"). Las demás pistas las genera el guion y no 
 - **Duplicar** (⌘D) justo a continuación y **eliminar** (⌫); una capa vacía desaparece.
 - Al editar el guion, las capas se conservan; si el video se acorta, se recortan con él.
 - Los archivos se copian al proyecto (`assets/images`, `assets/video`).
+- **Sobre la vista previa** (pestaña Capas): cada capa visible tiene un recuadro medido del DOM del
+  reproductor (`data-clip-id` / `data-clip-box` en el renderer). Arrastrar la mueve, la esquina la
+  escala, se pega al centro con guías, y las flechas la desplazan (Mayús = 5 %). Edita el mismo
+  borrador que el inspector y se guarda al soltar (o al dejar de pulsar flechas).
 
 ## Pendiente para fases siguientes
 
-- Arrastrar las capas directamente sobre la vista previa; fotogramas clave (animar posición/escala).
+- Fotogramas clave (animar posición y escala de una capa).
 - v3: fotogramas clave (`transform` animado), filtros, velocidad variable, máscaras.
 - Rutas de recursos del proyecto: hoy `src` relativo se sirve con `staticFile`; la app de escritorio
   servirá la carpeta del proyecto.
