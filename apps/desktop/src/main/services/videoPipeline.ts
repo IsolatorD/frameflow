@@ -22,6 +22,7 @@ import {
 	type TimelineEdit,
 	updateCaptions,
 } from "@frameflow/core/script/edit";
+import { applyOverlayOp, type OverlayOp } from "@frameflow/core/script/overlays";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import {
 	type CreateVideoInput,
@@ -61,10 +62,26 @@ const safeFileName = (path: string) => {
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-|-$/g, "");
-	return `${name || "musica"}${ext}`;
+	return `${name || "archivo"}${ext}`;
 };
 
 export const MUSIC_EXTENSIONS = ["mp3", "wav", "m4a", "aac", "ogg"];
+export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp"];
+export const VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "m4v"];
+
+/** Duración de un video con Remotion; si tarda o falla, sin duración (se usará 3 s). */
+const videoDuration = async (path: string): Promise<number | undefined> => {
+	try {
+		const { getVideoMetadata } = await import("@remotion/renderer");
+		const meta = await Promise.race([
+			getVideoMetadata(path),
+			new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000)),
+		]);
+		return meta?.durationInSeconds ?? undefined;
+	} catch {
+		return undefined;
+	}
+};
 
 /**
  * Orquesta el flujo de un video: guion (IA o manual) → voz → render.
@@ -326,6 +343,50 @@ export function createVideoPipeline(deps: Deps) {
 			const sb = await deps.videos.getVersion(videoId, number);
 			if (!sb) throw new Error(`No existe la versión ${number}`);
 			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
+		},
+
+		/** Capas libres: añadir, editar, mover, recortar, duplicar o borrar. */
+		async editOverlays(
+			videoId: string,
+			op: OverlayOp,
+		): Promise<{ video: VideoDetail; clipId: string | null }> {
+			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
+			const video = await loadVideo(videoId);
+			const result = applyOverlayOp(video.storyboard, op);
+			const saved = await deps.videos.saveVersion(
+				videoId,
+				result.storyboard,
+				"editor",
+				statusAfterEdit(result.storyboard),
+			);
+			return { video: saved, clipId: result.clipId };
+		},
+
+		/** Copia una imagen o un video a los recursos del proyecto (para añadirlo como capa). */
+		async importMedia(
+			videoId: string,
+			sourcePath: string,
+		): Promise<{ type: "image" | "video"; src: string; label: string; sourceDuration?: number }> {
+			const ext = extname(sourcePath).slice(1).toLowerCase();
+			const type = IMAGE_EXTENSIONS.includes(ext)
+				? "image"
+				: VIDEO_EXTENSIONS.includes(ext)
+					? "video"
+					: null;
+			if (!type) throw new Error("Formato no admitido: usa PNG, JPG, WebP, MP4, MOV o WebM");
+			const video = await loadVideo(videoId);
+			const project = await loadProject(video.projectId);
+			const relDir = join("assets", type === "image" ? "images" : "video");
+			mkdirSync(join(projectDir(project), relDir), { recursive: true });
+			const file = safeFileName(sourcePath);
+			const target = join(projectDir(project), relDir, file);
+			copyFileSync(sourcePath, target);
+			return {
+				type,
+				src: `${relDir}/${file}`,
+				label: basename(sourcePath),
+				...(type === "video" ? { sourceDuration: await videoDuration(target) } : {}),
+			};
 		},
 
 		/** Copia un archivo de música a los recursos del proyecto y lo devuelve listo para los ajustes. */

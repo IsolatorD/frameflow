@@ -2,13 +2,19 @@ import { BUILT_IN_PRESETS } from "@frameflow/core/presets";
 import type { BrandKit, CreateProjectInput } from "@frameflow/core/project";
 import type { Script, VideoSettings } from "@frameflow/core/script";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
+import type { OverlayOp } from "@frameflow/core/script/overlays";
 import type { CreateVideoInput } from "@frameflow/core/video";
 import type { ProjectsRepository } from "@frameflow/db/projects";
 import type { VideosRepository } from "@frameflow/db/videos";
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { z } from "zod";
 import { IPC, type IpcResult } from "../../shared/api";
-import { MUSIC_EXTENSIONS, type VideoPipeline } from "../services/videoPipeline";
+import {
+	IMAGE_EXTENSIONS,
+	MUSIC_EXTENSIONS,
+	VIDEO_EXTENSIONS,
+	type VideoPipeline,
+} from "../services/videoPipeline";
 
 /** Ejecuta un handler y convierte cualquier error en un mensaje legible para la interfaz. */
 async function wrap<T>(fn: () => Promise<T> | T): Promise<IpcResult<T>> {
@@ -72,6 +78,30 @@ export function registerIpcHandlers(deps: {
 	);
 	ipcMain.handle(IPC.videosRestoreVersion, (_e, id: unknown, number: unknown) =>
 		wrap(() => pipeline.restoreVersion(uuid(id), z.number().int().positive().parse(number))),
+	);
+	ipcMain.handle(IPC.videosEditOverlays, (_e, id: unknown, op: unknown) =>
+		wrap(() => pipeline.editOverlays(uuid(id), op as OverlayOp)),
+	);
+	ipcMain.handle(IPC.videosPickMedia, (event, id: unknown) =>
+		wrap(async () => {
+			const videoId = uuid(id);
+			const window = BrowserWindow.fromWebContents(event.sender);
+			const options: Electron.OpenDialogOptions = {
+				title: "Elige una imagen o un video",
+				properties: ["openFile"],
+				filters: [
+					{ name: "Imágenes y videos", extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS] },
+				],
+			};
+			const testFile = process.env.FRAMEFLOW_TEST_MEDIA; // ver FRAMEFLOW_TEST_MUSIC
+			const result = testFile
+				? { canceled: false, filePaths: [testFile] }
+				: window
+					? await dialog.showOpenDialog(window, options)
+					: await dialog.showOpenDialog(options);
+			const file = result.filePaths[0];
+			return result.canceled || !file ? null : pipeline.importMedia(videoId, file);
+		}),
 	);
 	ipcMain.handle(IPC.videosPickMusic, (event, id: unknown) =>
 		wrap(async () => {

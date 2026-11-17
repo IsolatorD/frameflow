@@ -88,9 +88,24 @@ editado del storyboard anterior:
 - **Deshacer/rehacer** (⌘Z / ⇧⌘Z): cada cambio es una versión; deshacer restaura la anterior
   como versión nueva, así que el historial nunca pierde nada.
 
+## Editor v3 — capas libres
+
+`core/script/overlays.ts` (`applyOverlayOp`): textos, imágenes y videos encima del video, en
+pistas `track-overlay-N` ("Capa N"). Las demás pistas las genera el guion y no se tocan.
+
+- **Añadir** en la posición del cabezal: va a la primera capa donde cabe; si se solapa con todo,
+  se crea una capa nueva encima. Los videos entran silenciados y con su duración (máx. 10 s).
+- **Editar** (inspector): texto, tamaño, color/fondo del tema, alineación; encaje de imagen/video;
+  volumen y punto de inicio del clip; posición, escala, opacidad, rotación; transiciones.
+  La vista previa muestra el borrador antes de aplicarlo.
+- **Mover/recortar** en la línea de tiempo sin pisar a sus vecinas de capa ni salir del video.
+- **Duplicar** (⌘D) justo a continuación y **eliminar** (⌫); una capa vacía desaparece.
+- Al editar el guion, las capas se conservan; si el video se acorta, se recortan con él.
+- Los archivos se copian al proyecto (`assets/images`, `assets/video`).
+
 ## Pendiente para fases siguientes
 
-- Editor v3: pistas y clips libres (imágenes, videos, textos propios), duplicar y borrar clips.
+- Arrastrar las capas directamente sobre la vista previa; fotogramas clave (animar posición/escala).
 - v3: fotogramas clave (`transform` animado), filtros, velocidad variable, máscaras.
 - Rutas de recursos del proyecto: hoy `src` relativo se sirve con `staticFile`; la app de escritorio
   servirá la carpeta del proyecto.

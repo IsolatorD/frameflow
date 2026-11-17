@@ -10,6 +10,7 @@ import type {
 import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
 import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
+import type { NewOverlay, OverlayOp } from "@frameflow/core/script/overlays";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 
 /** Resultado de una llamada IPC: errores como dato, no como excepción (mensajes limpios). */
@@ -41,6 +42,12 @@ export type FrameflowApi = {
 		editTimeline(id: string, edit: TimelineEdit): Promise<IpcResult<VideoDetail>>;
 		saveCaptions(id: string, sceneId: string, words: CaptionEdit): Promise<IpcResult<VideoDetail>>;
 		restoreVersion(id: string, number: number): Promise<IpcResult<VideoDetail>>;
+		editOverlays(
+			id: string,
+			op: OverlayOp,
+		): Promise<IpcResult<{ video: VideoDetail; clipId: string | null }>>;
+		/** Abre el selector de archivos y copia la imagen o el video al proyecto; null si se cancela. */
+		pickMedia(id: string): Promise<IpcResult<Exclude<NewOverlay, { type: "text" }> | null>>;
 		/** Abre el selector de archivos y copia la música al proyecto; null si se cancela. */
 		pickMusic(id: string): Promise<IpcResult<MusicSettings | null>>;
 		generateVoice(id: string): Promise<IpcResult<void>>;
@@ -69,6 +76,8 @@ export const IPC = {
 	videosEditTimeline: "videos:edit-timeline",
 	videosSaveCaptions: "videos:save-captions",
 	videosRestoreVersion: "videos:restore-version",
+	videosEditOverlays: "videos:edit-overlays",
+	videosPickMedia: "videos:pick-media",
 	videosPickMusic: "videos:pick-music",
 	videosGenerateVoice: "videos:generate-voice",
 	videosRender: "videos:render",

@@ -29,6 +29,8 @@ const api: FrameflowApi = {
 		saveCaptions: (id, sceneId, words) =>
 			ipcRenderer.invoke(IPC.videosSaveCaptions, id, sceneId, words),
 		restoreVersion: (id, number) => ipcRenderer.invoke(IPC.videosRestoreVersion, id, number),
+		editOverlays: (id, op) => ipcRenderer.invoke(IPC.videosEditOverlays, id, op),
+		pickMedia: (id) => ipcRenderer.invoke(IPC.videosPickMedia, id),
 		pickMusic: (id) => ipcRenderer.invoke(IPC.videosPickMusic, id),
 		generateVoice: (id) => ipcRenderer.invoke(IPC.videosGenerateVoice, id),
 		render: (id) => ipcRenderer.invoke(IPC.videosRender, id),

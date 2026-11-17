@@ -1,4 +1,4 @@
-export type TimelineClipKind = "scene" | "voice" | "music" | "text";
+export type TimelineClipKind = "scene" | "voice" | "music" | "text" | "media";
 
 export interface TimelineClip {
 	id: string;

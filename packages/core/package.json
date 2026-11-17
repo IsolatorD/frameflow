@@ -14,7 +14,8 @@
 		"./script/ai": "./src/script/ai.ts",
 		"./video": "./src/video/video.ts",
 		"./script/quality": "./src/script/quality.ts",
-		"./script/edit": "./src/script/edit.ts"
+		"./script/edit": "./src/script/edit.ts",
+		"./script/overlays": "./src/script/overlays.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

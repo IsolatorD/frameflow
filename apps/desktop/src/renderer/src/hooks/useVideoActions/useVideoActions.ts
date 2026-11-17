@@ -1,5 +1,6 @@
 import type { Script, VideoSettings } from "@frameflow/core/script";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
+import type { OverlayOp } from "@frameflow/core/script/overlays";
 import type { CreateVideoInput, VideoDetail } from "@frameflow/core/video";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { videosService } from "../../services/videosService/videosService";
@@ -54,6 +55,11 @@ export function useVideoActions(videoId: string) {
 			mutationFn: (number: number) => videosService.restoreVersion(videoId, number),
 			onSuccess: saved,
 		}),
+		editOverlays: useMutation({
+			mutationFn: (op: OverlayOp) => videosService.editOverlays(videoId, op),
+			onSuccess: ({ video }) => saved(video),
+		}),
+		pickMedia: useMutation({ mutationFn: () => videosService.pickMedia(videoId) }),
 		pickMusic: useMutation({ mutationFn: () => videosService.pickMusic(videoId) }),
 		generateVoice: useMutation({
 			mutationFn: () => videosService.generateVoice(videoId),

@@ -5,6 +5,7 @@ export const CLIP_COLORS: Record<TimelineClipKind, string> = {
 	voice: "bg-emerald-500/20 ring-emerald-400/40 text-emerald-100",
 	music: "bg-amber-400/15 ring-amber-400/40 text-amber-100",
 	text: "bg-sky-500/20 ring-sky-400/40 text-sky-100",
+	media: "bg-pink-500/20 ring-pink-400/40 text-pink-100",
 };
 
 /** Marcas de la regla: cada 1, 5 o 10 s según la duración, con etiqueta cada pocas marcas. */

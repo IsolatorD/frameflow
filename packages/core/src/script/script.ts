@@ -344,10 +344,15 @@ export const assembleStoryboard = (input: {
 		});
 	}
 
-	// Pistas que no genera el guion (las añadirá el editor de línea de tiempo) se conservan.
+	// Pistas que no genera el guion (capas libres del editor) se conservan, recortadas al video:
+	// si el guion se acorta, una capa no puede alargarlo con pantalla vacía.
 	const generated = new Set<string>(Object.values(TRACK_IDS));
 	for (const track of input.previous?.tracks ?? []) {
-		if (!generated.has(track.id)) tracks.push(track);
+		if (generated.has(track.id)) continue;
+		const clips = track.clips
+			.filter((c) => c.start < total - 0.05)
+			.map((c) => (c.start + c.duration > total ? { ...c, duration: total - c.start } : c));
+		if (clips.length > 0) tracks.push({ ...track, clips } as Track);
 	}
 
 	return storyboardSchema.parse({

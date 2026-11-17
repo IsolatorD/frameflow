@@ -4,6 +4,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { _electron as electron } from "playwright-core";
 
 const appDir = join(import.meta.dirname, "..");
@@ -36,10 +37,60 @@ const testMusic = join(home, "test-music.wav");
 	writeFileSync(testMusic, wav);
 }
 
+// Imagen de prueba: PNG de 200×120, mitad rosa y mitad amarilla (para reconocerla en el video).
+const testImage = join(home, "test-image.png");
+{
+	const crcTable = Array.from({ length: 256 }, (_, n) => {
+		let c = n;
+		for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+		return c >>> 0;
+	});
+	const crc = (buf) => {
+		let c = 0xffffffff;
+		for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+		return (c ^ 0xffffffff) >>> 0;
+	};
+	const chunk = (type, data) => {
+		const out = Buffer.alloc(12 + data.length);
+		out.writeUInt32BE(data.length, 0);
+		out.write(type, 4);
+		data.copy(out, 8);
+		out.writeUInt32BE(crc(Buffer.concat([Buffer.from(type), data])), 8 + data.length);
+		return out;
+	};
+	const [w, h] = [200, 120];
+	const raw = Buffer.alloc((w * 3 + 1) * h);
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			const o = y * (w * 3 + 1) + 1 + x * 3;
+			[raw[o], raw[o + 1], raw[o + 2]] = x < w / 2 ? [255, 0, 170] : [255, 220, 0];
+		}
+	}
+	const ihdr = Buffer.alloc(13);
+	ihdr.writeUInt32BE(w, 0);
+	ihdr.writeUInt32BE(h, 4);
+	ihdr[8] = 8;
+	ihdr[9] = 2;
+	writeFileSync(
+		testImage,
+		Buffer.concat([
+			Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+			chunk("IHDR", ihdr),
+			chunk("IDAT", deflateSync(raw)),
+			chunk("IEND", Buffer.alloc(0)),
+		]),
+	);
+}
+
 const app = await electron.launch({
 	args: [appDir],
 	cwd: appDir,
-	env: { ...process.env, FRAMEFLOW_HOME: home, FRAMEFLOW_TEST_MUSIC: testMusic },
+	env: {
+		...process.env,
+		FRAMEFLOW_HOME: home,
+		FRAMEFLOW_TEST_MUSIC: testMusic,
+		FRAMEFLOW_TEST_MEDIA: testImage,
+	},
 });
 const errors = [];
 const expect = (ok, message) => {
@@ -259,6 +310,49 @@ try {
 	await page.keyboard.press("Meta+z"); // atajo de teclado
 	await waitVersionAfter(before);
 	await clip(/^1 · ¿Sabías/).waitFor();
+
+	// Editor v3 — capas libres: texto e imagen encima del video, editar, arrastrar, duplicar, borrar.
+	await page.getByRole("tab", { name: /^Capas/ }).click();
+	before = await versionText();
+	await page.getByRole("button", { name: "+ Texto" }).click();
+	await waitVersionAfter(before);
+	await page.getByLabel("Contenido").fill("¡Increíble!");
+	await page.getByLabel("Vertical").fill("0.15");
+	await page.getByRole("tab", { name: /^Capas\s*●/ }).waitFor(); // borrador sin aplicar
+	before = await versionText();
+	await page.getByRole("button", { name: "Aplicar" }).click();
+	await waitVersionAfter(before);
+	before = await versionText();
+	await page.getByRole("button", { name: "+ Imagen o video" }).click();
+	await waitVersionAfter(before);
+	await page
+		.getByRole("button", { name: /test-image\.png/ })
+		.first()
+		.waitFor();
+
+	before = await versionText();
+	await dragBy(clip(/^¡Increíble!/), 40); // el texto, un poco más tarde
+	await waitVersionAfter(before);
+
+	await clip(/^test-image\.png/).click(); // selecciona la imagen en la línea de tiempo
+	before = await versionText();
+	await page.keyboard.press("Meta+d");
+	await waitVersionAfter(before);
+	expect(
+		(await page.locator('button[title^="test-image.png"]').count()) === 2,
+		"⌘D debería duplicar la imagen",
+	);
+	before = await versionText();
+	await page.keyboard.press("Backspace"); // borra la copia (queda seleccionada al duplicar)
+	await waitVersionAfter(before);
+	expect(
+		(await page.locator('button[title^="test-image.png"]').count()) === 1,
+		"⌫ debería borrar la copia",
+	);
+	await page.locator("[data-scroll-container]").evaluate((el) => el.scrollTo({ top: 0 }));
+	await page.waitForTimeout(500);
+	await page.screenshot({ path: join(shots, "11d-capas.png") });
+	await page.getByRole("tab", { name: /Guion y escenas/ }).click();
 
 	// Prueba completa (voz real con Kokoro + render MP4): solo con SMOKE_FULL=1, tarda minutos.
 	if (process.env.SMOKE_FULL) {

@@ -1,4 +1,3 @@
-import type { TimelineEdit } from "@frameflow/core/script/edit";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import { findClip, storyboardDuration } from "@frameflow/core/storyboard/timeline";
 import { Timeline } from "@frameflow/ui/src/organisms/Timeline/Timeline";
@@ -8,6 +7,7 @@ import {
 	type ClipTarget,
 	clipTarget,
 	moveEdit,
+	type TimelineAction,
 	timelineTracks,
 	trimEdit,
 } from "./VideoTimeline.constants";
@@ -31,7 +31,7 @@ export function VideoTimeline({
 	selectedClipId: string | null;
 	onSelect: (clipId: string, target: ClipTarget) => void;
 	/** Mover o recortar un clip (se guarda como versión nueva). */
-	onEdit: (edit: TimelineEdit) => void;
+	onEdit: (action: TimelineAction) => void;
 	disabled?: boolean;
 }) {
 	const [time, setTime] = useState(0);

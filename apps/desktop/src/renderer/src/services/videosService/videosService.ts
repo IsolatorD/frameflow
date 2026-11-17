@@ -1,6 +1,7 @@
 import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
 import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
+import type { NewOverlay, OverlayOp } from "@frameflow/core/script/overlays";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 import { unwrap } from "../../utils/unwrap/unwrap";
 
@@ -21,6 +22,13 @@ export const videosService = {
 		unwrap(window.frameflow.videos.saveCaptions(id, sceneId, words)),
 	restoreVersion: (id: string, number: number): Promise<VideoDetail> =>
 		unwrap(window.frameflow.videos.restoreVersion(id, number)),
+	editOverlays: (
+		id: string,
+		op: OverlayOp,
+	): Promise<{ video: VideoDetail; clipId: string | null }> =>
+		unwrap(window.frameflow.videos.editOverlays(id, op)),
+	pickMedia: (id: string): Promise<Exclude<NewOverlay, { type: "text" }> | null> =>
+		unwrap(window.frameflow.videos.pickMedia(id)),
 	pickMusic: (id: string): Promise<MusicSettings | null> =>
 		unwrap(window.frameflow.videos.pickMusic(id)),
 	generateVoice: (id: string): Promise<void> => unwrap(window.frameflow.videos.generateVoice(id)),

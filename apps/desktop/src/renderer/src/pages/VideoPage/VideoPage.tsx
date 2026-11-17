@@ -6,6 +6,7 @@ import {
 	scriptFromStoryboard,
 	videoSettingsFromStoryboard,
 } from "@frameflow/core/script";
+import { updateOverlay } from "@frameflow/core/script/overlays";
 import { findClip } from "@frameflow/core/storyboard/timeline";
 import { Badge } from "@frameflow/ui/src/atoms/Badge/Badge";
 import { Button } from "@frameflow/ui/src/atoms/Button/Button";
@@ -16,6 +17,7 @@ import { Section } from "@frameflow/ui/src/molecules/Section/Section";
 import { StepIndicator } from "@frameflow/ui/src/molecules/StepIndicator/StepIndicator";
 import { Tabs } from "@frameflow/ui/src/molecules/Tabs/Tabs";
 import { CaptionEditor } from "@frameflow/ui/src/organisms/CaptionEditor/CaptionEditor";
+import type { OverlayDraft } from "@frameflow/ui/src/organisms/OverlayInspector/OverlayInspectorInterface";
 import { ScriptEditor } from "@frameflow/ui/src/organisms/ScriptEditor/ScriptEditor";
 import { VideoSettingsPanel } from "@frameflow/ui/src/organisms/VideoSettingsPanel/VideoSettingsPanel";
 import { AppShell } from "@frameflow/ui/src/templates/AppShell/AppShell";
@@ -33,6 +35,8 @@ import { projectsNavGroup } from "../../utils/navigation/navigation";
 import { projectPath } from "../../utils/router/router";
 import { formatDuration, VIDEO_STATUS } from "../../utils/videoStatus/videoStatus";
 import { SECTIONS } from "../ProjectPage/ProjectPage.constants";
+import { OverlaysSection } from "./OverlaysSection/OverlaysSection";
+import { draftToPatch } from "./OverlaysSection/OverlaysSection.constants";
 import { StoryboardPreview } from "./StoryboardPreview/StoryboardPreview";
 import {
 	BUSY_MESSAGE,
@@ -59,9 +63,13 @@ export function VideoPage() {
 	const [scriptDirty, setScriptDirty] = useState(false);
 	const [settingsDirty, setSettingsDirty] = useState(false);
 	const [captionsDirty, setCaptionsDirty] = useState(false);
-	const dirty = scriptDirty || settingsDirty || captionsDirty;
+	const [overlayDraft, setOverlayDraft] = useState<{ clipId: string; draft: OverlayDraft } | null>(
+		null,
+	);
+	const dirty = scriptDirty || settingsDirty || captionsDirty || overlayDraft !== null;
+	const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
 	const blocker = useBlocker(dirty);
-	const [tab, setTab] = useState<"script" | "settings" | "captions">("script");
+	const [tab, setTab] = useState<"script" | "settings" | "captions" | "layers">("script");
 	const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 	const [focusSceneId, setFocusSceneId] = useState<string | null>(null);
 	const playerRef = useRef<PlayerRef>(null);
@@ -84,6 +92,43 @@ export function VideoPage() {
 		actions.restoreVersion.mutateAsync(n),
 	);
 	const canEdit = Boolean(video.data && !isBusy(video.data) && !dirty);
+
+	// La vista previa muestra el borrador del inspector de capas antes de aplicarlo.
+	const previewStoryboard = useMemo(() => {
+		if (!video.data) return null;
+		if (!overlayDraft) return video.data.storyboard;
+		try {
+			return updateOverlay(
+				video.data.storyboard,
+				overlayDraft.clipId,
+				draftToPatch(overlayDraft.draft),
+			);
+		} catch {
+			return video.data.storyboard; // borrador aún no válido (p. ej. texto vacío)
+		}
+	}, [video.data, overlayDraft]);
+
+	// ⌫ elimina y ⌘D duplica la capa seleccionada (fuera de los campos de texto).
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (!selectedOverlayId || !canEdit) return;
+			const target = event.target as HTMLElement | null;
+			if (target?.closest("input, textarea, select, [contenteditable]")) return;
+			const del = event.key === "Backspace" || event.key === "Delete";
+			const dup = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d";
+			if (!del && !dup) return;
+			event.preventDefault();
+			actions.editOverlays
+				.mutateAsync({ op: del ? "delete" : "duplicate", clipId: selectedOverlayId })
+				.then((r) => {
+					setSelectedOverlayId(r.clipId);
+					setSelectedClipId(r.clipId);
+				})
+				.catch(() => undefined);
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [selectedOverlayId, canEdit, actions.editOverlays]);
 
 	// ⌘Z / ⇧⌘Z (Ctrl en Windows/Linux) fuera de los campos de texto, que tienen su propio deshacer.
 	useEffect(() => {
@@ -182,13 +227,20 @@ export function VideoPage() {
 						voicedSceneIds={data.voicedSceneIds}
 						playerRef={playerRef}
 						selectedClipId={selectedClipId}
-						onEdit={(edit) => actions.editTimeline.mutate(edit)}
-						disabled={!canEdit || actions.editTimeline.isPending}
+						onEdit={(action) =>
+							action.kind === "timeline"
+								? actions.editTimeline.mutate(action.edit)
+								: actions.editOverlays.mutate(action.op)
+						}
+						disabled={!canEdit || actions.editTimeline.isPending || actions.editOverlays.isPending}
 						onSelect={(clipId, target) => {
 							setSelectedClipId(clipId);
 							if (target.kind === "scene") {
 								setTab("script");
 								setFocusSceneId(target.sceneId);
+							} else if (target.kind === "overlay") {
+								setTab("layers");
+								setSelectedOverlayId(target.clipId);
 							} else setTab("settings");
 						}}
 					/>
@@ -212,6 +264,7 @@ export function VideoPage() {
 										badge: settingsDirty ? "●" : undefined,
 									},
 									{ id: "captions", label: "Subtítulos", badge: captionsDirty ? "●" : undefined },
+									{ id: "layers", label: "Capas", badge: overlayDraft ? "●" : undefined },
 								]}
 								active={tab}
 								onChange={(id) => setTab(id as typeof tab)}
@@ -285,13 +338,35 @@ export function VideoPage() {
 									locked={busy}
 								/>
 							</div>
+							<div
+								id="video-edit-panel-layers"
+								role="tabpanel"
+								aria-labelledby="video-edit-tab-layers"
+								hidden={tab !== "layers"}
+							>
+								<OverlaysSection
+									storyboard={data.storyboard}
+									selectedId={selectedOverlayId}
+									onSelect={(clipId) => {
+										setSelectedOverlayId(clipId);
+										setSelectedClipId(clipId);
+									}}
+									playhead={() => (playerRef.current?.getCurrentFrame() ?? 0) / data.storyboard.fps}
+									editOverlays={(op) => actions.editOverlays.mutateAsync(op)}
+									pickMedia={() => actions.pickMedia.mutateAsync()}
+									onDraftChange={setOverlayDraft}
+									saving={actions.editOverlays.isPending}
+									error={actions.editOverlays.error?.message ?? actions.pickMedia.error?.message}
+									locked={busy}
+								/>
+							</div>
 						</div>
 					)}
 
 					<aside className="sticky top-0 flex flex-col gap-4">
 						{media.data && project.data && data.status !== "scripting" ? (
 							<StoryboardPreview
-								storyboard={data.storyboard}
+								storyboard={previewStoryboard ?? data.storyboard}
 								mediaBaseUrl={`${media.data}/projects/${project.data.slug}`}
 								playerRef={playerRef}
 							/>

@@ -43,6 +43,8 @@ export const transitionSchema = z.object({
 
 const visual = {
 	...timing,
+	/** Nombre para mostrar en el editor (p. ej. el archivo original de una imagen). */
+	label: z.string().optional(),
 	transform: transformSchema.optional(),
 	enter: transitionSchema.optional(),
 	exit: transitionSchema.optional(),
@@ -99,6 +101,8 @@ export const videoClipSchema = z.object({
 	fit: z.enum(["cover", "contain"]).default("cover"),
 	volume: z.number().min(0).max(2).default(1),
 	playbackRate: z.number().positive().default(1),
+	/** Duración del archivo original (límite para recortar). */
+	sourceDuration: z.number().positive().optional(),
 });
 
 export const audioClipSchema = z.object({
