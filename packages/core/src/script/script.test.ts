@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { findClip, storyboardDuration } from "../storyboard/timeline";
 import { generateScript, type LlmProvider } from "./ai";
-import { assembleStoryboard, estimateSeconds, scriptFromStoryboard, starterScript } from "./script";
+import {
+	applyVideoSettings,
+	assembleStoryboard,
+	estimateSeconds,
+	isFullyVoiced,
+	scriptFromStoryboard,
+	starterScript,
+	videoSettingsFromStoryboard,
+	voicedSceneIds,
+} from "./script";
 
 const style = {
 	theme: { background: "#000000", text: "#FFFFFF", accent: "#FAC775", muted: "#888888" },
@@ -175,11 +184,137 @@ describe("assembleStoryboard", () => {
 		expect(cta && cta.start + cta.duration).toBeCloseTo(expected);
 	});
 
-	it("con voz, cada escena dura la voz más un respiro, y el guion se recupera intacto", () => {
-		const voices = script.scenes.map((_, i) => ({ src: `v${i}.wav`, duration: 4 }));
-		const sb = assembleStoryboard({ script, language: "es", format: "9:16", style, voices });
+	const voiced = (sb: ReturnType<typeof assembleStoryboard>) =>
+		Object.fromEntries(
+			scriptFromStoryboard(sb).scenes.map((scene) => [
+				scene.id as string,
+				{
+					src: `${scene.id}.wav`,
+					duration: 4,
+					words: scene.narration
+						.split(" ")
+						.map((text, i) => ({ text, start: i * 0.2, end: i * 0.2 + 0.2 })),
+				},
+			]),
+		);
+
+	it("con voz, cada escena dura la voz más un respiro, y el guion se recupera con ids estables", () => {
+		const draft = assembleStoryboard({ script, language: "es", format: "9:16", style });
+		const sb = assembleStoryboard({
+			script: scriptFromStoryboard(draft),
+			language: "es",
+			format: "9:16",
+			style,
+			voices: voiced(draft),
+			previous: draft,
+		});
 		expect(storyboardDuration(sb)).toBeCloseTo(13.5);
-		expect(findClip(sb, "voice-2")?.clip.start).toBeCloseTo(4.5);
-		expect(scriptFromStoryboard(sb)).toEqual(script);
+		expect(findClip(sb, "voice-scene-2")?.clip.start).toBeCloseTo(4.5);
+		expect(isFullyVoiced(sb)).toBe(true);
+		const back = scriptFromStoryboard(sb);
+		expect(back.scenes.map((s) => s.id)).toEqual(["scene-1", "scene-2", "scene-3"]);
+		expect(back.scenes.map(({ narration, content }) => ({ narration, content }))).toEqual(
+			script.scenes,
+		);
+	});
+
+	it("al editar, conserva la voz de las escenas cuya narración no cambió, aunque se reordenen", () => {
+		const draft = assembleStoryboard({ script, language: "es", format: "9:16", style });
+		const sb = assembleStoryboard({
+			script: scriptFromStoryboard(draft),
+			language: "es",
+			format: "9:16",
+			style,
+			voices: voiced(draft),
+			previous: draft,
+		});
+		const edited = scriptFromStoryboard(sb);
+		const [a, b, c] = edited.scenes;
+		if (!a || !b || !c) throw new Error("faltan escenas");
+		const next = assembleStoryboard({
+			script: { ...edited, scenes: [c, { ...b, narration: "Texto nuevo para la escena." }, a] },
+			language: "es",
+			format: "9:16",
+			style,
+			previous: sb,
+		});
+		expect([...voicedSceneIds(next)].sort()).toEqual(["scene-1", "scene-3"]);
+		expect(isFullyVoiced(next)).toBe(false);
+		expect(findClip(next, "voice-scene-3")?.clip.start).toBe(0); // la voz sigue a su escena
+	});
+
+	it("aplica los ajustes de escena y los recupera", () => {
+		const withSettings = {
+			...script,
+			scenes: script.scenes.map((s, i) =>
+				i === 1
+					? {
+							...s,
+							settings: {
+								accent: "#FF0000",
+								enter: "pop" as const,
+								exit: "none" as const,
+								extraTime: 1.5,
+							},
+						}
+					: s,
+			),
+		};
+		const sb = assembleStoryboard({ script: withSettings, language: "es", format: "9:16", style });
+		const clip = findClip(sb, "scene-2")?.clip;
+		expect(clip?.type === "scene" && clip.theme?.accent).toBe("#FF0000");
+		expect(clip?.type === "scene" && clip.enter?.type).toBe("pop");
+		expect(clip?.type === "scene" && clip.exit).toBeUndefined();
+		expect(clip?.duration).toBeCloseTo(estimateSeconds(script.scenes[1]?.narration ?? "") + 1.5);
+		expect(scriptFromStoryboard(sb).scenes[1]?.settings).toEqual({
+			accent: "#FF0000",
+			enter: "pop",
+			exit: "none",
+			extraTime: 1.5,
+		});
+		expect(scriptFromStoryboard(sb).scenes[0]?.settings).toBeUndefined();
+	});
+
+	it("los ajustes del video añaden música que cubre todo el video y se conserva al editar", () => {
+		const sb = assembleStoryboard({
+			script,
+			language: "es",
+			format: "9:16",
+			style,
+			ctaText: "Síguenos",
+		});
+		const music = { src: "assets/music/a.mp3", label: "a.mp3", volume: 0.2, fadeIn: 1, fadeOut: 2 };
+		const withMusic = applyVideoSettings(sb, {
+			captions: { enabled: false, maxWordsPerPage: 3 },
+			ctaText: "Más en el canal",
+			music,
+		});
+		expect(videoSettingsFromStoryboard(withMusic)).toEqual({
+			captions: { enabled: false, maxWordsPerPage: 3 },
+			ctaText: "Más en el canal",
+			music,
+		});
+		const longer = assembleStoryboard({
+			script: {
+				...script,
+				scenes: [
+					...script.scenes,
+					...script.scenes.map(({ narration, content }) => ({ narration, content })),
+				],
+			},
+			language: "es",
+			format: "9:16",
+			style: withMusic.style,
+			previous: withMusic,
+		});
+		const clip = findClip(longer, "music")?.clip;
+		expect(clip?.duration).toBeCloseTo(storyboardDuration(longer));
+		expect(clip?.type === "audio" && clip.loop).toBe(true);
+		expect(videoSettingsFromStoryboard(longer).ctaText).toBe("Más en el canal");
+		expect(
+			videoSettingsFromStoryboard(
+				applyVideoSettings(longer, { ...videoSettingsFromStoryboard(longer), music: null }),
+			).music,
+		).toBeNull();
 	});
 });

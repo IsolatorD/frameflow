@@ -1,18 +1,22 @@
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, mkdirSync } from "node:fs";
+import { basename, extname, join } from "node:path";
 import type { ProjectWithBrand } from "@frameflow/core/project";
 import { videoStyleFromBrandKit } from "@frameflow/core/project";
 import {
+	applyVideoSettings,
 	assembleStoryboard,
+	DEFAULT_MUSIC_VOLUME,
+	isFullyVoiced,
 	type SceneVoice,
 	type Script,
 	scriptFromStoryboard,
 	scriptSchema,
 	starterScript,
+	type VideoSettings,
+	voicedSceneIds,
 } from "@frameflow/core/script";
 import { generateScript, type LlmStatus, type OllamaProvider } from "@frameflow/core/script/ai";
 import type { Storyboard } from "@frameflow/core/storyboard";
-import { findClip } from "@frameflow/core/storyboard/timeline";
 import {
 	type CreateVideoInput,
 	createVideoInputSchema,
@@ -38,11 +42,23 @@ type Deps = {
 	emit: (event: JobEvent) => void;
 };
 
-/** Texto de la llamada a la acción que ya tiene el video (se conserva al rehacer el storyboard). */
-const ctaOf = (sb: Storyboard): string | undefined => {
-	const clip = findClip(sb, "cta")?.clip;
-	return clip?.type === "text" ? clip.text : undefined;
+/** Tras editar: con todas las voces al día se puede renderizar; si no, falta generar voz. */
+const statusAfterEdit = (sb: Storyboard): VideoStatus =>
+	isFullyVoiced(sb) ? "ready_to_render" : "draft";
+
+/** "Mi Canción (final).mp3" → "mi-cancion-final.mp3". */
+const safeFileName = (path: string) => {
+	const ext = extname(path).toLowerCase();
+	const name = basename(path, extname(path))
+		.normalize("NFD")
+		.replace(/\p{M}/gu, "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "");
+	return `${name || "musica"}${ext}`;
 };
+
+export const MUSIC_EXTENSIONS = ["mp3", "wav", "m4a", "aac", "ogg"];
 
 /**
  * Orquesta el flujo de un video: guion (IA o manual) → voz → render.
@@ -121,7 +137,7 @@ export function createVideoPipeline(deps: Deps) {
 			language: video.language,
 			format: video.format,
 			style: video.storyboard.style,
-			ctaText: ctaOf(video.storyboard),
+			previous: video.storyboard,
 		});
 		return deps.videos.saveVersion(video.id, sb, "ai", "draft");
 	};
@@ -132,8 +148,15 @@ export function createVideoPipeline(deps: Deps) {
 		signal: AbortSignal,
 		progress: (p: number | null, message: string) => void,
 	) => {
-		await deps.videos.setStatus(video.id, "voicing");
 		const script = scriptFromStoryboard(video.storyboard);
+		// Solo las escenas sin voz o cuya narración cambió: las demás conservan la suya.
+		const voiced = voicedSceneIds(video.storyboard);
+		const missing = script.scenes.filter((scene) => !voiced.has(scene.id ?? ""));
+		if (missing.length === 0) {
+			await deps.videos.setStatus(video.id, "ready_to_render");
+			return video;
+		}
+		await deps.videos.setStatus(video.id, "voicing");
 		const voice = project.brandKit.voices[video.language];
 		if (!voice) throw new Error(`La marca no tiene voz para el idioma ${video.language}`);
 		const relDir = join("videos", video.id, "voice");
@@ -145,23 +168,30 @@ export function createVideoPipeline(deps: Deps) {
 				voiceId: voice.voiceId,
 				speed: voice.speed,
 				outDir: join(projectDir(project), relDir),
-				items: script.scenes.map((scene, i) => ({ id: String(i), text: scene.narration })),
+				items: missing.map((scene) => ({ id: scene.id ?? "", text: scene.narration })),
 			},
-			(done, total) => progress(done / total, `Voz de la escena ${done} de ${total}`),
+			(done, total) =>
+				progress(
+					done / total,
+					missing.length === script.scenes.length
+						? `Voz de la escena ${done} de ${total}`
+						: `Voz de las escenas cambiadas: ${done} de ${total}`,
+				),
 			signal,
 		);
-		const voices: SceneVoice[] = results.map((r) => ({
-			src: `${relDir}/${r.file}`,
-			duration: r.duration,
-			words: r.words,
-		}));
+		const voices: Record<string, SceneVoice> = Object.fromEntries(
+			results.map((r) => [
+				r.id,
+				{ src: `${relDir}/${r.file}`, duration: r.duration, words: r.words },
+			]),
+		);
 		const sb = assembleStoryboard({
 			script,
 			language: video.language,
 			format: video.format,
 			style: video.storyboard.style,
-			ctaText: ctaOf(video.storyboard),
 			voices,
+			previous: video.storyboard,
 		});
 		return deps.videos.saveVersion(video.id, sb, "voice", "ready_to_render");
 	};
@@ -242,7 +272,10 @@ export function createVideoPipeline(deps: Deps) {
 			return video;
 		},
 
-		/** Modo paso a paso: guarda el guion editado. Cambiarlo invalida la voz (hay que regenerarla). */
+		/**
+		 * Guarda el guion editado (texto, orden y ajustes de cada escena).
+		 * Las escenas cuya narración no cambió conservan su voz; las demás tendrán que regenerarla.
+		 */
 		async saveScript(videoId: string, input: Script): Promise<VideoDetail> {
 			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
 			const script = scriptSchema.parse(input);
@@ -252,9 +285,39 @@ export function createVideoPipeline(deps: Deps) {
 				language: video.language,
 				format: video.format,
 				style: video.storyboard.style,
-				ctaText: ctaOf(video.storyboard),
+				previous: video.storyboard,
 			});
-			return deps.videos.saveVersion(videoId, sb, "manual", "draft");
+			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
+		},
+
+		/** Subtítulos, llamada a la acción y música (no tocan el guion ni las voces). */
+		async saveSettings(videoId: string, settings: VideoSettings): Promise<VideoDetail> {
+			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
+			const video = await loadVideo(videoId);
+			const sb = applyVideoSettings(video.storyboard, settings);
+			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
+		},
+
+		/** Copia un archivo de música a los recursos del proyecto y lo devuelve listo para los ajustes. */
+		async importMusic(
+			videoId: string,
+			sourcePath: string,
+		): Promise<NonNullable<VideoSettings["music"]>> {
+			const ext = extname(sourcePath).slice(1).toLowerCase();
+			if (!MUSIC_EXTENSIONS.includes(ext)) throw new Error("Formato de audio no admitido");
+			const video = await loadVideo(videoId);
+			const project = await loadProject(video.projectId);
+			const relDir = join("assets", "music");
+			mkdirSync(join(projectDir(project), relDir), { recursive: true });
+			const file = safeFileName(sourcePath);
+			copyFileSync(sourcePath, join(projectDir(project), relDir, file));
+			return {
+				src: `${relDir}/${file}`,
+				label: basename(sourcePath),
+				volume: DEFAULT_MUSIC_VOLUME,
+				fadeIn: 1,
+				fadeOut: 2,
+			};
 		},
 
 		async generateVoice(videoId: string): Promise<void> {

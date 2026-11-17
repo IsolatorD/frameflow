@@ -140,6 +140,7 @@ export const buildFromScenes = (input: {
 			content: scene.content,
 			narration: scene.narration,
 			exit: input.sceneExit,
+			extraTime: 0,
 		});
 		if (scene.voice) {
 			voiceClips.push({
@@ -155,6 +156,7 @@ export const buildFromScenes = (input: {
 				fadeOut: 0,
 				words: scene.voice.words,
 				linkedTo: sceneId,
+				loop: false,
 			});
 		}
 		cursor += duration;

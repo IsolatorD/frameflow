@@ -1,4 +1,4 @@
-import type { Script } from "@frameflow/core/script";
+import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
 import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 import { unwrap } from "../../utils/unwrap/unwrap";
@@ -12,6 +12,10 @@ export const videosService = {
 		unwrap(window.frameflow.videos.create(input)),
 	saveScript: (id: string, script: Script): Promise<VideoDetail> =>
 		unwrap(window.frameflow.videos.saveScript(id, script)),
+	saveSettings: (id: string, settings: VideoSettings): Promise<VideoDetail> =>
+		unwrap(window.frameflow.videos.saveSettings(id, settings)),
+	pickMusic: (id: string): Promise<MusicSettings | null> =>
+		unwrap(window.frameflow.videos.pickMusic(id)),
 	generateVoice: (id: string): Promise<void> => unwrap(window.frameflow.videos.generateVoice(id)),
 	render: (id: string): Promise<void> => unwrap(window.frameflow.videos.render(id)),
 	cancel: (id: string): Promise<void> => unwrap(window.frameflow.videos.cancel(id)),

@@ -1,4 +1,4 @@
-import type { Script } from "@frameflow/core/script";
+import type { Script, VideoSettings } from "@frameflow/core/script";
 import type { CreateVideoInput } from "@frameflow/core/video";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { videosService } from "../../services/videosService/videosService";
@@ -28,6 +28,14 @@ export function useVideoActions(videoId: string) {
 				return queryClient.invalidateQueries({ queryKey: [...VIDEOS_KEY, "list"] });
 			},
 		}),
+		saveSettings: useMutation({
+			mutationFn: (settings: VideoSettings) => videosService.saveSettings(videoId, settings),
+			onSuccess: (video) => {
+				queryClient.setQueryData(videoKey(videoId), video);
+				return queryClient.invalidateQueries({ queryKey: [...VIDEOS_KEY, "list"] });
+			},
+		}),
+		pickMusic: useMutation({ mutationFn: () => videosService.pickMusic(videoId) }),
 		generateVoice: useMutation({
 			mutationFn: () => videosService.generateVoice(videoId),
 			onSettled: refresh,

@@ -1,3 +1,4 @@
+import { isFullyVoiced, voicedSceneIds } from "@frameflow/core/script";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import { storyboardSchema } from "@frameflow/core/storyboard";
 import { storyboardDuration } from "@frameflow/core/storyboard/timeline";
@@ -15,8 +16,8 @@ import { renders, storyboardVersions, variants, videos } from "../schema";
 type VersionSource = (typeof storyboardVersions.$inferInsert)["source"];
 const now = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 
-const hasVoice = (sb: Storyboard) =>
-	sb.tracks.some((t) => t.kind === "audio" && t.clips.some((c) => c.role === "voice"));
+/** "Con voz" = todas las escenas tienen su voz al día (requisito para renderizar). */
+const hasVoice = (sb: Storyboard) => isFullyVoiced(sb);
 
 /**
  * Videos de un proyecto. De momento cada video tiene una sola variante (idioma + formato);
@@ -141,6 +142,7 @@ export const createVideosRepository = (db: Database) => {
 				versionNumber: version.number,
 				storyboard: version.storyboard,
 				render: renderInfo,
+				voicedSceneIds: [...voicedSceneIds(version.storyboard)],
 			};
 		},
 

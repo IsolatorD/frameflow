@@ -3,7 +3,7 @@ import type { AppShellProps } from "./AppShellInterface";
 export function AppShell({ nav, title, subtitle, eyebrow, actions, children }: AppShellProps) {
 	return (
 		<div className="flex h-screen bg-zinc-950 text-zinc-100">
-			<aside className="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-white/5 bg-zinc-900/50 px-3 pb-4 pt-12">
+			<aside className="relative flex w-56 shrink-0 flex-col overflow-y-auto border-r border-white/5 bg-zinc-900/50 px-3 pb-4 pt-12">
 				{/* pt-12 deja sitio a los botones de ventana de macOS (titleBarStyle hiddenInset) */}
 				<div className="mb-6 flex items-center gap-2 px-2">
 					<span className="flex size-7 items-center justify-center rounded-lg bg-violet-500 text-sm font-bold">
@@ -61,7 +61,10 @@ export function AppShell({ nav, title, subtitle, eyebrow, actions, children }: A
 					</div>
 					<div className="shrink-0 [-webkit-app-region:no-drag]">{actions}</div>
 				</header>
-				<div className="flex-1 overflow-y-auto px-8 py-6">{children}</div>
+				{/* relative: los controles sr-only (position: absolute) quedan dentro y no alargan el documento */}
+				<div data-scroll-container className="relative flex-1 overflow-y-auto px-8 py-6">
+					{children}
+				</div>
 			</main>
 		</div>
 	);

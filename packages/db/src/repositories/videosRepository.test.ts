@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assembleStoryboard, starterScript } from "@frameflow/core/script";
+import { assembleStoryboard, scriptFromStoryboard, starterScript } from "@frameflow/core/script";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Database, openDatabase } from "../client";
 import { createProjectsRepository } from "./projectsRepository";
@@ -26,15 +26,34 @@ const style = {
 	captions: { enabled: true, maxWordsPerPage: 4 },
 };
 const storyboardFor = (topic: string, withVoice = false) => {
-	const script = starterScript(topic);
+	const draft = assembleStoryboard({
+		script: starterScript(topic),
+		language: "es",
+		format: "9:16",
+		style,
+	});
+	if (!withVoice) return draft;
+	// Voz "al día" para cada escena: sus palabras coinciden con la narración.
+	const script = scriptFromStoryboard(draft);
+	const voices = Object.fromEntries(
+		script.scenes.map((scene) => [
+			scene.id as string,
+			{
+				src: `${scene.id}.wav`,
+				duration: 3,
+				words: scene.narration
+					.split(" ")
+					.map((text, i) => ({ text, start: i * 0.2, end: i * 0.2 + 0.2 })),
+			},
+		]),
+	);
 	return assembleStoryboard({
 		script,
 		language: "es",
 		format: "9:16",
 		style,
-		voices: withVoice
-			? script.scenes.map((_, i) => ({ src: `v${i}.wav`, duration: 3 }))
-			: undefined,
+		voices,
+		previous: draft,
 	});
 };
 

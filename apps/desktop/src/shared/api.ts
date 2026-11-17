@@ -7,7 +7,7 @@ import type {
 	ProjectSummary,
 	ProjectWithBrand,
 } from "@frameflow/core/project";
-import type { Script } from "@frameflow/core/script";
+import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
 import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 
@@ -36,6 +36,9 @@ export type FrameflowApi = {
 		get(id: string): Promise<IpcResult<VideoDetail | null>>;
 		create(input: CreateVideoInput): Promise<IpcResult<VideoDetail>>;
 		saveScript(id: string, script: Script): Promise<IpcResult<VideoDetail>>;
+		saveSettings(id: string, settings: VideoSettings): Promise<IpcResult<VideoDetail>>;
+		/** Abre el selector de archivos y copia la música al proyecto; null si se cancela. */
+		pickMusic(id: string): Promise<IpcResult<MusicSettings | null>>;
 		generateVoice(id: string): Promise<IpcResult<void>>;
 		render(id: string): Promise<IpcResult<void>>;
 		cancel(id: string): Promise<IpcResult<void>>;
@@ -58,6 +61,8 @@ export const IPC = {
 	videosGet: "videos:get",
 	videosCreate: "videos:create",
 	videosSaveScript: "videos:save-script",
+	videosSaveSettings: "videos:save-settings",
+	videosPickMusic: "videos:pick-music",
 	videosGenerateVoice: "videos:generate-voice",
 	videosRender: "videos:render",
 	videosCancel: "videos:cancel",

@@ -1,7 +1,7 @@
 // Prueba de humo de la app compilada: abre Electron con una carpeta de datos temporal,
 // crea un proyecto desde la interfaz y guarda capturas en test-results/.
 // Uso: pnpm smoke   (compila y ejecuta)
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
@@ -11,10 +11,35 @@ const shots = join(appDir, "test-results");
 mkdirSync(shots, { recursive: true });
 const home = mkdtempSync(join(tmpdir(), "frameflow-smoke-"));
 
+// Música de prueba: 3 s de un tono suave (WAV PCM 16 bits). El diálogo nativo de archivos no se
+// puede pulsar desde Playwright, así que la app lo toma de FRAMEFLOW_TEST_MUSIC.
+const testMusic = join(home, "test-music.wav");
+{
+	const rate = 22050;
+	const samples = rate * 3;
+	const wav = Buffer.alloc(44 + samples * 2);
+	wav.write("RIFF", 0);
+	wav.writeUInt32LE(36 + samples * 2, 4);
+	wav.write("WAVEfmt ", 8);
+	wav.writeUInt32LE(16, 16);
+	wav.writeUInt16LE(1, 20);
+	wav.writeUInt16LE(1, 22);
+	wav.writeUInt32LE(rate, 24);
+	wav.writeUInt32LE(rate * 2, 28);
+	wav.writeUInt16LE(2, 32);
+	wav.writeUInt16LE(16, 34);
+	wav.write("data", 36);
+	wav.writeUInt32LE(samples * 2, 40);
+	for (let i = 0; i < samples; i++) {
+		wav.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 220 * i) / rate) * 8000), 44 + i * 2);
+	}
+	writeFileSync(testMusic, wav);
+}
+
 const app = await electron.launch({
 	args: [appDir],
 	cwd: appDir,
-	env: { ...process.env, FRAMEFLOW_HOME: home },
+	env: { ...process.env, FRAMEFLOW_HOME: home, FRAMEFLOW_TEST_MUSIC: testMusic },
 });
 const errors = [];
 const expect = (ok, message) => {
@@ -134,13 +159,77 @@ try {
 	await page.waitForTimeout(800); // deja pintar el primer fotograma de la vista previa
 	await page.screenshot({ path: join(shots, "10-video-guion.png") });
 
+	// Editor: estilo de la escena 1 (colores propios, sin fundido de salida, pausa de 1 s).
+	await page.getByText("Estilo de la escena").first().click();
+	await page.getByText("Colores propios", { exact: true }).first().click();
+	await page.getByLabel("Acento", { exact: true }).first().fill("#FF00AA");
+	await page.getByLabel("Salida").first().selectOption("none");
+	await page.getByLabel("Pausa después de la voz").first().fill("1");
+	await page.getByRole("button", { name: "Guardar guion" }).click();
+	await page.getByText(/versión 3/).waitFor();
+	await page.getByText("Estilo de la escena").first().click(); // las tarjetas se recrean al guardar
+	expect(
+		await page
+			.getByRole("switch", { name: /Colores propios/ })
+			.first()
+			.isChecked(),
+		"Los colores propios de la escena no se conservaron al guardar",
+	);
+
+	// Línea de tiempo: pulsar el clip de la escena 3 la resalta en el editor.
+	await page.locator("[data-scroll-container]").evaluate((el) => el.scrollTo({ top: 0 }));
+	await page.waitForTimeout(300);
+	await page.screenshot({ path: join(shots, "10b-linea-de-tiempo.png") });
+	// El documento nunca debe ser más alto que la ventana (si no, la app entera se desplaza).
+	const doc = await page.evaluate(() => {
+		const el = document.scrollingElement;
+		return el ? { top: el.scrollTop, height: el.scrollHeight, view: el.clientHeight } : null;
+	});
+	expect(
+		doc && doc.top === 0 && doc.height <= doc.view,
+		`El documento se desplaza: ${JSON.stringify(doc)}`,
+	);
+	await page.getByRole("button", { name: /^3 · / }).click();
+	await page.locator("fieldset.ring-violet-400", { hasText: "Escena 3" }).waitFor();
+	await page.waitForTimeout(700); // termina el desplazamiento suave hasta la escena
+	await page.screenshot({ path: join(shots, "11-linea-de-tiempo.png") });
+
+	// Ajustes del video: llamada a la acción y música de fondo.
+	await page.getByRole("tab", { name: /Ajustes del video/ }).click();
+	await page.getByLabel("Texto").fill("Suscríbete a Astroinfo");
+	await page.getByRole("button", { name: "+ Añadir música" }).click();
+	await page.getByText("♪ test-music.wav").waitFor();
+	await page.getByLabel("Volumen").fill("0.3");
+	await page.getByRole("button", { name: "Guardar ajustes" }).click();
+	await page.getByText(/versión 4/).waitFor();
+	await page.getByRole("button", { name: /♪ test-music\.wav/ }).waitFor(); // clip en la línea de tiempo
+	await page.waitForTimeout(500);
+	await page.screenshot({ path: join(shots, "11b-editor-ajustes.png") });
+	await page.getByRole("tab", { name: /Guion y escenas/ }).click();
+
 	// Prueba completa (voz real con Kokoro + render MP4): solo con SMOKE_FULL=1, tarda minutos.
 	if (process.env.SMOKE_FULL) {
 		await page.getByRole("button", { name: "Generar voz" }).click();
-		await page.getByRole("button", { name: "Regenerar voz" }).waitFor({ timeout: 600_000 });
-		await page.screenshot({ path: join(shots, "11-video-con-voz.png") });
+		await page.getByText("Voz al día en todas las escenas").waitFor({ timeout: 600_000 });
+
+		// Cambiar una escena solo invalida su voz: las demás se conservan.
+		await page
+			.getByLabel("Narración")
+			.nth(1)
+			.fill("El azul se dispersa más que el rojo, y por eso domina el cielo.");
+		await page.getByRole("button", { name: "Guardar guion" }).click();
+		await page.getByRole("button", { name: "Generar voz de 1 escena" }).waitFor();
+		expect(
+			(await page.getByText("Sin voz", { exact: true }).count()) === 1,
+			"Solo la escena 2 debería quedar sin voz",
+		);
+		await page.screenshot({ path: join(shots, "12-una-escena-sin-voz.png") });
+		await page.getByRole("button", { name: "Generar voz de 1 escena" }).click();
+		await page.getByText("Voz al día en todas las escenas").waitFor({ timeout: 600_000 });
+
 		await page.getByRole("button", { name: "Crear video (MP4)" }).click();
 		await page.getByRole("button", { name: "Ver video" }).waitFor({ timeout: 600_000 });
+		await page.waitForTimeout(500);
 		await page.screenshot({ path: join(shots, "12-video-listo.png") });
 	}
 

@@ -1,12 +1,19 @@
 import { z } from "zod";
 import type { VideoFormat } from "../storyboard/scenes";
 import {
+	type AudioClip,
+	type Clip,
 	type SceneClip,
+	STORYBOARD_VERSION,
 	type Storyboard,
+	type StoryboardInput,
 	sceneContentSchema,
+	storyboardSchema,
+	type TextClip,
+	type Track,
+	transitionSchema,
 	type VideoStyle,
 } from "../storyboard/schema";
-import { buildFromScenes, type ScriptScene } from "../storyboard/timeline";
 
 // El guion es la parte del video que escribe la IA o el usuario en el modo paso a paso:
 // escenas con su narración y su contenido visual. Todo lo demás (colores, voz, formato) sale de la marca.
@@ -16,9 +23,30 @@ export const VOICE_TAIL_SECONDS = 0.5; // respiro tras cada narración antes de 
 export const MIN_SCENE_SECONDS = 2.5;
 export const TARGET_SECONDS_RANGE = { min: 20, max: 180, step: 10 } as const;
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Usa un color #RRGGBB");
+export const TRANSITION_TYPES = transitionSchema.shape.type.options;
+export type TransitionType = (typeof TRANSITION_TYPES)[number];
+export const EXTRA_TIME_RANGE = { min: 0, max: 5, step: 0.5 } as const;
+export const TRANSITION_SECONDS = 0.4;
+
+/** Ajustes visuales de una escena que el editor permite cambiar (sobreviven al regenerar). */
+export const sceneSettingsSchema = z.object({
+	accent: hexColor.optional(),
+	background: hexColor.optional(),
+	/** Sin definir = sin transición de entrada. */
+	enter: z.enum(TRANSITION_TYPES).optional(),
+	/** Sin definir = fundido (el comportamiento por defecto). */
+	exit: z.enum(TRANSITION_TYPES).optional(),
+	extraTime: z.number().min(EXTRA_TIME_RANGE.min).max(EXTRA_TIME_RANGE.max).optional(),
+});
+export type SceneSettings = z.infer<typeof sceneSettingsSchema>;
+
 export const scriptSceneSchema = z.object({
+	/** Identidad estable de la escena (conserva su voz y sus ajustes al reordenar o editar). */
+	id: z.string().min(1).optional(),
 	narration: z.string().trim().min(1, "Cada escena necesita narración"),
 	content: sceneContentSchema,
+	settings: sceneSettingsSchema.optional(),
 });
 
 export const scriptSchema = z.object({
@@ -47,86 +75,339 @@ export type SceneVoice = {
 	words?: { text: string; start: number; end: number }[];
 };
 
+export type MusicSettings = {
+	/** Ruta relativa a la carpeta del proyecto. */
+	src: string;
+	label: string;
+	volume: number;
+	fadeIn: number;
+	fadeOut: number;
+};
+
+export const MUSIC_VOLUME_RANGE = { min: 0, max: 1, step: 0.05 } as const;
+/** Volumen inicial de la música: por debajo de la voz. */
+export const DEFAULT_MUSIC_VOLUME = 0.15;
+
+/** Altura (0–1) del centro de la llamada a la acción: por encima de los subtítulos. */
+export const CTA_Y = 0.7;
+
+const TRACK_IDS = {
+	scenes: "track-scenes",
+	voice: "track-voice",
+	music: "track-music",
+	cta: "track-cta",
+} as const;
+
+const sameWords = (a: string, b: string) =>
+	a.trim().split(/\s+/).join(" ") === b.trim().split(/\s+/).join(" ");
+
+const sceneClips = (sb: Storyboard): SceneClip[] =>
+	sb.tracks
+		.flatMap((t): Clip[] => t.clips)
+		.filter((c): c is SceneClip => c.type === "scene")
+		.sort((a, b) => a.start - b.start);
+
+const voiceClips = (sb: Storyboard): AudioClip[] =>
+	sb.tracks.flatMap((t) =>
+		t.kind === "audio" ? t.clips.filter((c) => c.role === "voice" && c.linkedTo) : [],
+	);
+
+/** Voz de una escena, solo si se generó con su narración actual. */
+const currentVoice = (
+	sb: Storyboard | undefined,
+	sceneId: string,
+	narration: string,
+): SceneVoice | undefined => {
+	const clip = sb && voiceClips(sb).find((c) => c.linkedTo === sceneId);
+	if (!clip?.words || !sameWords(clip.words.map((w) => w.text).join(" "), narration))
+		return undefined;
+	return { src: clip.src, duration: clip.duration, words: clip.words };
+};
+
+const musicOf = (sb: Storyboard | undefined): MusicSettings | null => {
+	const clip = sb?.tracks
+		.flatMap((t) => (t.kind === "audio" ? t.clips : []))
+		.find((c) => c.role === "music");
+	return clip
+		? {
+				src: clip.src,
+				label: clip.label ?? clip.src.split("/").pop() ?? clip.src,
+				volume: clip.volume,
+				fadeIn: clip.fadeIn,
+				fadeOut: clip.fadeOut,
+			}
+		: null;
+};
+
+const ctaOf = (sb: Storyboard | undefined): string => {
+	const clip = sb?.tracks.find((t) => t.id === TRACK_IDS.cta)?.clips[0];
+	return clip?.type === "text" ? clip.text : "";
+};
+
+/** Ids de las escenas que tienen la voz al día. */
+export const voicedSceneIds = (sb: Storyboard): Set<string> =>
+	new Set(
+		sceneClips(sb)
+			.filter((c) => currentVoice(sb, c.id, c.narration ?? ""))
+			.map((c) => c.id),
+	);
+
+/** ¿Todas las escenas tienen su voz al día? (requisito para renderizar). */
+export const isFullyVoiced = (sb: Storyboard): boolean => {
+	const scenes = sceneClips(sb);
+	const voiced = voicedSceneIds(sb);
+	return scenes.length > 0 && scenes.every((c) => voiced.has(c.id));
+};
+
+const uniqueSceneIds = (script: Script): string[] => {
+	const used = new Set(script.scenes.flatMap((s) => (s.id ? [s.id] : [])));
+	let n = 1;
+	const seen = new Set<string>();
+	return script.scenes.map((scene) => {
+		if (scene.id && !seen.has(scene.id)) {
+			seen.add(scene.id);
+			return scene.id;
+		}
+		while (used.has(`scene-${n}`)) n++;
+		const id = `scene-${n}`;
+		used.add(id);
+		seen.add(id);
+		return id;
+	});
+};
+
 /**
- * Guion (+ voces, si ya existen) → storyboard v2 con el estilo de la marca.
- * Sin voz, cada escena dura lo estimado; con voz, lo que dura la voz más un respiro.
- * Si la marca tiene llamada a la acción, se añade una pista con ella al final.
+ * Guion → storyboard v2. Si hay un storyboard anterior, conserva lo editado:
+ * la voz de cada escena cuya narración no cambió, la música, la llamada a la acción y el estilo.
+ * Duración de cada escena: voz + respiro (o estimación sin voz) + su tiempo extra.
  */
 export const assembleStoryboard = (input: {
 	script: Script;
 	language: string;
 	format: VideoFormat;
 	style: VideoStyle;
+	/** Undefined = conservar la del storyboard anterior. */
 	ctaText?: string;
-	/** Voz por índice de escena (undefined = aún sin voz). */
-	voices?: readonly (SceneVoice | undefined)[];
+	/** Voces nuevas por id de escena (las demás se toman del storyboard anterior si siguen al día). */
+	voices?: Readonly<Record<string, SceneVoice>>;
+	/** Undefined = conservar la del storyboard anterior; null = quitarla. */
+	music?: MusicSettings | null;
+	previous?: Storyboard;
 	fps?: number;
 }): Storyboard => {
-	const scenes: ScriptScene[] = input.script.scenes.map((scene, i) => {
-		const voice = input.voices?.[i];
-		return {
+	const ids = uniqueSceneIds(input.script);
+	const scenes: SceneClip[] = [];
+	const voices: AudioClip[] = [];
+	let cursor = 0;
+	input.script.scenes.forEach((scene, i) => {
+		const id = ids[i] as string;
+		const settings = scene.settings ?? {};
+		const voice = input.voices?.[id] ?? currentVoice(input.previous, id, scene.narration);
+		const extraTime = settings.extraTime ?? 0;
+		const duration =
+			(voice ? voice.duration + VOICE_TAIL_SECONDS : estimateSeconds(scene.narration)) + extraTime;
+		const theme = {
+			...(settings.accent ? { accent: settings.accent } : {}),
+			...(settings.background ? { background: settings.background } : {}),
+		};
+		scenes.push({
+			type: "scene",
+			id,
+			start: cursor,
+			duration,
 			content: scene.content,
 			narration: scene.narration,
-			duration: voice ? voice.duration + VOICE_TAIL_SECONDS : estimateSeconds(scene.narration),
-			voice,
-		};
+			extraTime,
+			...(Object.keys(theme).length ? { theme } : {}),
+			enter:
+				settings.enter && settings.enter !== "none"
+					? { type: settings.enter, duration: TRANSITION_SECONDS }
+					: undefined,
+			exit:
+				settings.exit === "none"
+					? undefined
+					: { type: settings.exit ?? "fade", duration: TRANSITION_SECONDS },
+		});
+		if (voice) {
+			voices.push({
+				type: "audio",
+				id: `voice-${id}`,
+				start: cursor,
+				duration: voice.duration,
+				src: voice.src,
+				trimStart: 0,
+				role: "voice",
+				volume: 1,
+				fadeIn: 0,
+				fadeOut: 0,
+				words: voice.words,
+				linkedTo: id,
+				loop: false,
+			});
+		}
+		cursor += duration;
 	});
-	const sb = buildFromScenes({
+	const total = cursor;
+
+	const tracks: Track[] = [
+		{
+			kind: "visual",
+			id: TRACK_IDS.scenes,
+			name: "Escenas",
+			hidden: false,
+			locked: false,
+			clips: scenes,
+		},
+	];
+	if (voices.length > 0) {
+		tracks.push({
+			kind: "audio",
+			id: TRACK_IDS.voice,
+			name: "Voz",
+			hidden: false,
+			locked: false,
+			muted: false,
+			clips: voices,
+		});
+	}
+
+	const music = input.music === undefined ? musicOf(input.previous) : input.music;
+	if (music) {
+		tracks.push({
+			kind: "audio",
+			id: TRACK_IDS.music,
+			name: "Música",
+			hidden: false,
+			locked: false,
+			muted: false,
+			clips: [
+				{
+					type: "audio",
+					id: "music",
+					start: 0,
+					duration: total,
+					src: music.src,
+					label: music.label,
+					trimStart: 0,
+					role: "music",
+					volume: music.volume,
+					fadeIn: music.fadeIn,
+					fadeOut: music.fadeOut,
+					loop: true,
+				},
+			],
+		});
+	}
+
+	const cta = (input.ctaText ?? ctaOf(input.previous)).trim();
+	if (cta && total >= 3) {
+		const clip: TextClip = {
+			type: "text",
+			id: "cta",
+			start: Math.max(0, total - 2.5),
+			duration: Math.min(2.5, total),
+			text: cta,
+			// Por encima de la franja de subtítulos (abajo, ~12 % de la altura) para no taparlos.
+			transform: { x: 0.5, y: CTA_Y, scale: 1, rotation: 0, opacity: 1 },
+			style: {
+				fontSize: 56,
+				fontWeight: 800,
+				color: "background",
+				background: "accent",
+				align: "center",
+			},
+			enter: { type: "pop", duration: TRANSITION_SECONDS },
+		};
+		tracks.push({
+			kind: "visual",
+			id: TRACK_IDS.cta,
+			name: "Llamada a la acción",
+			hidden: false,
+			locked: false,
+			clips: [clip],
+		});
+	}
+
+	// Pistas que no genera el guion (las añadirá el editor de línea de tiempo) se conservan.
+	const generated = new Set<string>(Object.values(TRACK_IDS));
+	for (const track of input.previous?.tracks ?? []) {
+		if (!generated.has(track.id)) tracks.push(track);
+	}
+
+	return storyboardSchema.parse({
+		version: STORYBOARD_VERSION,
 		title: input.script.title,
 		language: input.language,
 		format: input.format,
-		fps: input.fps ?? 30,
+		fps: input.fps ?? input.previous?.fps ?? 30,
 		style: input.style,
-		scenes,
-		sceneExit: { type: "fade", duration: 0.4 },
-	});
-
-	const cta = input.ctaText?.trim();
-	const total = scenes.reduce((sum, s) => sum + s.duration, 0);
-	if (!cta || total < 3) return sb;
-	return {
-		...sb,
-		tracks: [
-			...sb.tracks,
-			{
-				kind: "visual",
-				id: "track-cta",
-				name: "Llamada a la acción",
-				hidden: false,
-				locked: false,
-				clips: [
-					{
-						type: "text",
-						id: "cta",
-						start: Math.max(0, total - 2.5),
-						duration: Math.min(2.5, total),
-						text: cta,
-						transform: { x: 0.5, y: 0.82, scale: 1, rotation: 0, opacity: 1 },
-						style: {
-							fontSize: 56,
-							fontWeight: 800,
-							color: "background",
-							background: "accent",
-							align: "center",
-						},
-						enter: { type: "pop", duration: 0.4 },
-					},
-				],
-			},
-		],
-	};
+		tracks,
+	} satisfies StoryboardInput);
 };
 
-/** Lee el guion de vuelta desde un storyboard (las escenas de la pista principal, en orden). */
-export const scriptFromStoryboard = (sb: Storyboard): Script => {
-	const sceneTrack = sb.tracks.find(
-		(t) => t.kind === "visual" && t.clips.some((c) => c.type === "scene"),
-	);
-	const scenes = (sceneTrack?.clips ?? [])
-		.filter((c): c is SceneClip => c.type === "scene")
-		.sort((a, b) => a.start - b.start)
-		.map((c) => ({ narration: c.narration ?? "", content: c.content }));
-	return { title: sb.title, scenes };
+/** Lee el guion de vuelta desde un storyboard, con los ids y ajustes de cada escena. */
+export const scriptFromStoryboard = (sb: Storyboard): Script => ({
+	title: sb.title,
+	scenes: sceneClips(sb).map((c) => {
+		const settings: SceneSettings = {
+			...(c.theme?.accent ? { accent: c.theme.accent } : {}),
+			...(c.theme?.background ? { background: c.theme.background } : {}),
+			...(c.enter ? { enter: c.enter.type } : {}),
+			...(c.exit
+				? c.exit.type === "fade"
+					? {}
+					: { exit: c.exit.type }
+				: { exit: "none" as const }),
+			...(c.extraTime ? { extraTime: c.extraTime } : {}),
+		};
+		return {
+			id: c.id,
+			narration: c.narration ?? "",
+			content: c.content,
+			...(Object.keys(settings).length ? { settings } : {}),
+		};
+	}),
+});
+
+/** Ajustes del video que no son del guion: subtítulos, llamada a la acción y música. */
+export type VideoSettings = {
+	captions: VideoStyle["captions"];
+	ctaText: string;
+	music: MusicSettings | null;
+};
+
+export const videoSettingsFromStoryboard = (sb: Storyboard): VideoSettings => ({
+	captions: { ...sb.style.captions },
+	ctaText: ctaOf(sb),
+	music: musicOf(sb),
+});
+
+export const videoSettingsSchema = z.object({
+	captions: z.object({ enabled: z.boolean(), maxWordsPerPage: z.number().int().min(1).max(8) }),
+	ctaText: z.string().trim().max(120),
+	music: z
+		.object({
+			src: z.string().min(1),
+			label: z.string(),
+			volume: z.number().min(MUSIC_VOLUME_RANGE.min).max(MUSIC_VOLUME_RANGE.max),
+			fadeIn: z.number().min(0).max(10),
+			fadeOut: z.number().min(0).max(10),
+		})
+		.nullable(),
+});
+
+/** Aplica los ajustes del video conservando guion, voces y demás ediciones. */
+export const applyVideoSettings = (sb: Storyboard, input: VideoSettings): Storyboard => {
+	const settings = videoSettingsSchema.parse(input);
+	return assembleStoryboard({
+		script: scriptFromStoryboard(sb),
+		language: sb.language,
+		format: sb.format,
+		style: { ...sb.style, captions: settings.captions },
+		ctaText: settings.ctaText,
+		music: settings.music,
+		previous: sb,
+	});
 };
 
 /** "Por qué el cielo…" → "por qué el cielo…" (para insertarlo en mitad de una frase). */

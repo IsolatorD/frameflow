@@ -18,6 +18,10 @@ export function ScriptEditor({
 	serverError,
 	locked = false,
 	lockedReason,
+	defaultTheme,
+	extraTimeRange,
+	voicedSceneIds,
+	focusSceneId,
 }: ScriptEditorProps) {
 	const nextKey = useRef(0);
 	const keyed = (scenes: ScriptSceneDraft[]): Keyed[] =>
@@ -36,7 +40,24 @@ export function ScriptEditor({
 	const draft = cleanScript({ title, scenes: scenes.map((s) => s.scene) });
 	const dirty = JSON.stringify(draft) !== JSON.stringify(cleanScript(value));
 	const problems = scriptProblems({ title, scenes: scenes.map((s) => s.scene) });
-	const total = draft.scenes.reduce((t, s) => t + estimateSeconds(s.narration), 0);
+	const total = draft.scenes.reduce(
+		(t, s) => t + estimateSeconds(s.narration) + (s.settings?.extraTime ?? 0),
+		0,
+	);
+
+	// Al elegir una escena en la línea de tiempo, se muestra su tarjeta.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: solo al cambiar la escena elegida
+	useEffect(() => {
+		if (!focusSceneId) return;
+		const key = scenes.find((s) => s.scene.id === focusSceneId)?.key;
+		const card = key === undefined ? null : document.getElementById(`scene-${key}-card`);
+		// Solo se desplaza el contenedor con scroll de la página: scrollIntoView movería también
+		// los contenedores exteriores (overflow: hidden) y descuadraría la ventana.
+		const container = card?.closest<HTMLElement>("[data-scroll-container]");
+		if (!card || !container) return;
+		const offset = card.getBoundingClientRect().top - container.getBoundingClientRect().top;
+		container.scrollTo({ top: container.scrollTop + offset - 16, behavior: "smooth" });
+	}, [focusSceneId]);
 
 	useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
@@ -79,11 +100,21 @@ export function ScriptEditor({
 					index={i}
 					total={scenes.length}
 					scene={scene}
-					estimate={formatSeconds(estimateSeconds(scene.narration))}
+					estimate={formatSeconds(
+						estimateSeconds(scene.narration) + (scene.settings?.extraTime ?? 0),
+					)}
 					onChange={(next) => update(key, next)}
 					onMove={(delta) => move(i, delta)}
 					onRemove={() => setScenes((list) => list.filter((s) => s.key !== key))}
 					disabled={locked}
+					defaultTheme={defaultTheme}
+					extraTimeRange={extraTimeRange}
+					voiced={
+						voicedSceneIds === undefined
+							? undefined
+							: Boolean(scene.id && voicedSceneIds.includes(scene.id))
+					}
+					highlighted={Boolean(focusSceneId && scene.id === focusSceneId)}
 				/>
 			))}
 			<Button

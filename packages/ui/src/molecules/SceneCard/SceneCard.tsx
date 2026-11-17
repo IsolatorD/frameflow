@@ -1,6 +1,8 @@
+import { Badge } from "../../atoms/Badge/Badge";
 import { Button } from "../../atoms/Button/Button";
 import { SelectField } from "../../atoms/SelectField/SelectField";
 import { TextField } from "../../atoms/TextField/TextField";
+import { SceneStyleFields } from "../SceneStyleFields/SceneStyleFields";
 import { convertContent, MAX_LINES, SCENE_TYPES } from "./SceneCard.constants";
 import type { SceneCardProps, SceneContentDraft } from "./SceneCardInterface";
 
@@ -15,14 +17,21 @@ export function SceneCard({
 	onRemove,
 	estimate,
 	disabled = false,
+	defaultTheme,
+	extraTimeRange,
+	voiced,
+	highlighted = false,
 }: SceneCardProps) {
 	const setContent = (content: SceneContentDraft) => onChange({ ...scene, content });
 	const { content } = scene;
 
 	return (
 		<fieldset
+			id={`${id}-card`}
 			disabled={disabled}
-			className="flex flex-col gap-4 rounded-2xl bg-white/[0.02] p-4 ring-1 ring-white/10"
+			className={`flex scroll-mt-4 flex-col gap-4 rounded-2xl bg-white/[0.02] p-4 ring-1 transition-shadow ${
+				highlighted ? "ring-2 ring-violet-400" : "ring-white/10"
+			}`}
 		>
 			<legend className="sr-only">Escena {index + 1}</legend>
 			<div className="flex items-center justify-between gap-3">
@@ -32,6 +41,7 @@ export function SceneCard({
 					</span>
 					Escena {index + 1}
 					<span className="text-xs font-normal text-zinc-500">≈ {estimate}</span>
+					{voiced === false ? <Badge tone="warning">Sin voz</Badge> : null}
 				</span>
 				<div className="flex gap-1">
 					<Button
@@ -170,6 +180,21 @@ export function SceneCard({
 					</div>
 				)}
 			</div>
+			<details className="group rounded-xl bg-white/[0.02] ring-1 ring-white/5">
+				<summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-zinc-400 select-none hover:text-zinc-200 [&::-webkit-details-marker]:hidden">
+					<span className="inline-block transition-transform group-open:rotate-90">›</span> Estilo
+					de la escena
+				</summary>
+				<div className="px-3 pt-1 pb-3">
+					<SceneStyleFields
+						idPrefix={id}
+						settings={scene.settings ?? {}}
+						onChange={(settings) => onChange({ ...scene, settings })}
+						defaultTheme={defaultTheme}
+						extraTimeRange={extraTimeRange}
+					/>
+				</div>
+			</details>
 		</fieldset>
 	);
 }

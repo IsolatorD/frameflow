@@ -1,3 +1,4 @@
+import { scriptFromStoryboard } from "@frameflow/core/script";
 import type { JobEvent, VideoDetail } from "@frameflow/core/video";
 import type { Step } from "@frameflow/ui/src/molecules/StepIndicator/StepIndicatorInterface";
 
@@ -38,3 +39,11 @@ export const BUSY_MESSAGE: Record<(typeof BUSY_STATUSES)[number], string> = {
 
 export const formatBytes = (bytes: number) =>
 	bytes > 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.round(bytes / 1000)} KB`;
+
+/** "Generar voz" o, si ya hay voces, cuántas escenas faltan. */
+export const voiceButtonLabel = (video: VideoDetail) => {
+	const total = scriptFromStoryboard(video.storyboard).scenes.length;
+	const missing = total - video.voicedSceneIds.length;
+	if (video.voicedSceneIds.length === 0) return "Generar voz";
+	return missing === 1 ? "Generar voz de 1 escena" : `Generar voz de ${missing} escenas`;
+};

@@ -67,6 +67,8 @@ export type VideoDetail = VideoSummary & {
 	versionNumber: number;
 	storyboard: Storyboard;
 	render: RenderInfo | null;
+	/** Escenas cuya voz está al día (las demás se generarán en el próximo "Generar voz"). */
+	voicedSceneIds: string[];
 };
 
 /** Progreso de una tarea larga (guion, voz, render), que el proceso principal emite a la interfaz. */

@@ -130,6 +130,9 @@ importers:
       '@remotion/google-fonts':
         specifier: 4.0.543
         version: 4.0.543(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@remotion/media-utils':
+        specifier: 4.0.543
+        version: 4.0.543(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
         specifier: ^19.3.1
         version: 19.3.1

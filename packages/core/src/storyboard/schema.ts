@@ -57,6 +57,8 @@ export const sceneClipSchema = z.object({
 	narration: z.string().optional(),
 	/** Colores propios de esta escena; si falta, se usa el estilo del video. */
 	theme: themeSchema.partial().optional(),
+	/** Segundos extra que la escena sigue en pantalla después de la voz (pausa dramática). */
+	extraTime: seconds.default(0),
 });
 
 /** Texto libre encima del video (títulos, rótulos, llamadas a la acción). */
@@ -112,6 +114,10 @@ export const audioClipSchema = z.object({
 	words: z.array(wordSchema).optional(),
 	/** Clip al que va unido (p. ej. la escena que narra): el editor los mueve juntos. */
 	linkedTo: id.optional(),
+	/** Repetir el audio hasta cubrir el clip (música de fondo más corta que el video). */
+	loop: z.boolean().default(false),
+	/** Nombre para mostrar (p. ej. el archivo de música original). */
+	label: z.string().optional(),
 });
 
 export const visualClipSchema = z.discriminatedUnion("type", [

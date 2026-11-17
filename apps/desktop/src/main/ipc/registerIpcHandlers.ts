@@ -1,13 +1,13 @@
 import { BUILT_IN_PRESETS } from "@frameflow/core/presets";
 import type { BrandKit, CreateProjectInput } from "@frameflow/core/project";
-import type { Script } from "@frameflow/core/script";
+import type { Script, VideoSettings } from "@frameflow/core/script";
 import type { CreateVideoInput } from "@frameflow/core/video";
 import type { ProjectsRepository } from "@frameflow/db/projects";
 import type { VideosRepository } from "@frameflow/db/videos";
-import { ipcMain, shell } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { z } from "zod";
 import { IPC, type IpcResult } from "../../shared/api";
-import type { VideoPipeline } from "../services/videoPipeline";
+import { MUSIC_EXTENSIONS, type VideoPipeline } from "../services/videoPipeline";
 
 /** Ejecuta un handler y convierte cualquier error en un mensaje legible para la interfaz. */
 async function wrap<T>(fn: () => Promise<T> | T): Promise<IpcResult<T>> {
@@ -57,6 +57,29 @@ export function registerIpcHandlers(deps: {
 	);
 	ipcMain.handle(IPC.videosSaveScript, (_e, id: unknown, script: unknown) =>
 		wrap(() => pipeline.saveScript(uuid(id), script as Script)),
+	);
+	ipcMain.handle(IPC.videosSaveSettings, (_e, id: unknown, settings: unknown) =>
+		wrap(() => pipeline.saveSettings(uuid(id), settings as VideoSettings)),
+	);
+	ipcMain.handle(IPC.videosPickMusic, (event, id: unknown) =>
+		wrap(async () => {
+			const videoId = uuid(id);
+			const window = BrowserWindow.fromWebContents(event.sender);
+			const options: Electron.OpenDialogOptions = {
+				title: "Elige la música de fondo",
+				properties: ["openFile"],
+				filters: [{ name: "Audio", extensions: MUSIC_EXTENSIONS }],
+			};
+			// En las pruebas automáticas el diálogo nativo no se puede pulsar: se pasa el archivo por entorno.
+			const testFile = process.env.FRAMEFLOW_TEST_MUSIC;
+			const result = testFile
+				? { canceled: false, filePaths: [testFile] }
+				: window
+					? await dialog.showOpenDialog(window, options)
+					: await dialog.showOpenDialog(options);
+			const file = result.filePaths[0];
+			return result.canceled || !file ? null : pipeline.importMusic(videoId, file);
+		}),
 	);
 	ipcMain.handle(IPC.videosGenerateVoice, (_e, id: unknown) =>
 		wrap(() => pipeline.generateVoice(uuid(id))),

@@ -60,6 +60,21 @@ Funciones puras (no mutan; devuelven un storyboard nuevo → deshacer/rehacer se
 - `storyboardDuration`, `captionWords`, `findClip`, `toFrames`.
 - `splitClip` — la "tijera" del editor.
 
+## Editar sin perder trabajo (editor v1)
+
+`assembleStoryboard` (en `core/script`) vuelve a montar el video desde el guion **conservando** lo
+editado del storyboard anterior:
+
+- Cada escena tiene un **id estable** (`scene-N`); su voz es `voice-<id>` y va unida a ella.
+- La voz de una escena se conserva mientras sus palabras coincidan con la narración actual;
+  "Generar voz" solo sintetiza las escenas nuevas o cambiadas.
+- Ajustes por escena (`settings` del guion): acento y fondo propios, transiciones de entrada y salida,
+  pausa extra. Se guardan en el clip (`theme`, `enter`, `exit`, `extraTime`) y se leen de vuelta.
+- Ajustes del video (`applyVideoSettings`): subtítulos, llamada a la acción (por encima de la franja
+  de subtítulos) y música de fondo, que cubre todo el video y se reajusta si cambia la duración.
+- La música en bucle se repite con varias `<Sequence>` en el renderer, no con `loop` de Remotion:
+  con `loop`, los fundidos se reiniciaban en cada vuelta.
+
 ## Pendiente para fases siguientes
 
 - v2 del editor: mover, recortar, duplicar, borrar clips y pistas (operaciones en `timeline.ts`).
