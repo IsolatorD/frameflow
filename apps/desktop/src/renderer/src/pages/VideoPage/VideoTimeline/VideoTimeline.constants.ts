@@ -83,6 +83,7 @@ export const timelineTracks = (
 									: isOverlayTrack(track)
 										? overlayEditable(sb, clip.id)
 										: undefined,
+							markers: clip.keyframes?.map((k) => k.at),
 						};
 					default:
 						return {
@@ -92,6 +93,7 @@ export const timelineTracks = (
 							label: clip.label ?? (clip.type === "image" ? "Imagen" : "Video"),
 							kind: "media" as const,
 							editable: isOverlayTrack(track) ? overlayEditable(sb, clip.id) : undefined,
+							markers: clip.keyframes?.map((k) => k.at),
 						};
 				}
 			}),

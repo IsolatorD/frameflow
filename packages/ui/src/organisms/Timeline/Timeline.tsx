@@ -153,6 +153,15 @@ export function Timeline({
 										style={{ left: pct(start, duration), width: pct(length, duration) }}
 									>
 										{clip.label}
+										{clip.markers?.map((at) => (
+											<span
+												key={at}
+												aria-hidden="true"
+												data-keyframe-marker
+												className="pointer-events-none absolute bottom-0.5 size-1.5 -translate-x-1/2 rotate-45 bg-white/90"
+												style={{ left: pct(at, length) }}
+											/>
+										))}
 										{!disabled && clip.editable?.trimEnd ? (
 											<span
 												aria-hidden="true"

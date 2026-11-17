@@ -9,11 +9,20 @@ export interface OverlayTransformDraft {
 	opacity: number;
 }
 
+export interface OverlayKeyframeDraft {
+	/** Segundos desde el inicio de la capa. */
+	at: number;
+	transform: OverlayTransformDraft;
+	easing: "linear" | "ease";
+}
+
 /** Lo editable de una capa (texto, imagen o video). */
 export interface OverlayDraft {
 	type: "text" | "image" | "video";
 	label: string;
+	/** Con animación, la transformación en el instante del cabezal. */
 	transform: OverlayTransformDraft;
+	keyframes?: OverlayKeyframeDraft[];
 	enter: TransitionDraft;
 	exit: TransitionDraft;
 	text?: string;
@@ -31,7 +40,22 @@ export interface OverlayDraft {
 	sourceDuration?: number;
 }
 
+/** Controles de animación (los calcula quien sabe dónde está el cabezal). */
+export interface OverlayAnimationProps {
+	enabled: boolean;
+	/** Segundo del cabezal dentro de la capa. */
+	time: number;
+	/** ¿El cabezal está dentro de la capa? */
+	inside: boolean;
+	keyframes: readonly { at: number; current: boolean }[];
+	onToggle: (enabled: boolean) => void;
+	onAddHere: () => void;
+	onRemoveHere: () => void;
+	onSeek: (at: number) => void;
+}
+
 export interface OverlayInspectorProps {
+	animation?: OverlayAnimationProps;
 	/** La capa tal como está guardada. */
 	value: OverlayDraft;
 	/**

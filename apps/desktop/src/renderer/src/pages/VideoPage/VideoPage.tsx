@@ -7,6 +7,7 @@ import {
 	videoSettingsFromStoryboard,
 } from "@frameflow/core/script";
 import { updateOverlay } from "@frameflow/core/script/overlays";
+import { KEYFRAME_TOLERANCE } from "@frameflow/core/storyboard/keyframes";
 import { findClip } from "@frameflow/core/storyboard/timeline";
 import { Badge } from "@frameflow/ui/src/atoms/Badge/Badge";
 import { Button } from "@frameflow/ui/src/atoms/Button/Button";
@@ -26,6 +27,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router";
 import { useJobEvents } from "../../hooks/useJobEvents/useJobEvents";
 import { useMediaBaseUrl } from "../../hooks/useMediaBaseUrl/useMediaBaseUrl";
+import { usePlayheadSeconds } from "../../hooks/usePlayheadSeconds/usePlayheadSeconds";
 import { useProject } from "../../hooks/useProject/useProject";
 import { useProjects } from "../../hooks/useProjects/useProjects";
 import { useVersionHistory } from "../../hooks/useVersionHistory/useVersionHistory";
@@ -36,7 +38,15 @@ import { projectPath } from "../../utils/router/router";
 import { formatDuration, VIDEO_STATUS } from "../../utils/videoStatus/videoStatus";
 import { SECTIONS } from "../ProjectPage/ProjectPage.constants";
 import { OverlaysSection } from "./OverlaysSection/OverlaysSection";
-import { draftToPatch, overlayDraftOf } from "./OverlaysSection/OverlaysSection.constants";
+import {
+	addKeyframeHere,
+	draftToPatch,
+	effectiveDraft,
+	overlayDraftOf,
+	removeKeyframeHere,
+	toggleAnimation,
+	writeBack,
+} from "./OverlaysSection/OverlaysSection.constants";
 import { PreviewOverlayEditor } from "./PreviewOverlayEditor/PreviewOverlayEditor";
 import { StoryboardPreview } from "./StoryboardPreview/StoryboardPreview";
 import {
@@ -81,6 +91,44 @@ export function VideoPage() {
 		setSelectedClipId(clipId);
 		setOverlayDraft((d) => (d && d.clipId !== clipId ? null : d));
 	};
+
+	// ── Capa seleccionada: borrador real (con fotogramas) y su versión en el instante del cabezal ──
+	const fps = video.data?.storyboard.fps ?? 30;
+	const overlayClip = (clipId: string | null) =>
+		clipId && video.data ? (findClip(video.data.storyboard, clipId)?.clip ?? null) : null;
+	const rawOverlayOf = (clipId: string): OverlayDraft | null =>
+		overlayDraft?.clipId === clipId
+			? overlayDraft.draft
+			: video.data
+				? overlayDraftOf(video.data.storyboard, clipId)
+				: null;
+	/** Segundo del cabezal dentro de una capa, leído ahora mismo del reproductor. */
+	const liveClipTime = (clipId: string) => {
+		const clip = overlayClip(clipId);
+		const now = (playerRef.current?.getCurrentFrame() ?? 0) / fps;
+		return clip
+			? Math.round(Math.min(Math.max(now - clip.start, 0), clip.duration) * 100) / 100
+			: 0;
+	};
+	const selectedClip = overlayClip(selectedOverlayId);
+	const savedOverlay =
+		selectedOverlayId && video.data
+			? overlayDraftOf(video.data.storyboard, selectedOverlayId)
+			: null;
+	const rawOverlay = selectedOverlayId ? rawOverlayOf(selectedOverlayId) : null;
+	const overlayAnimated = Boolean(rawOverlay?.keyframes?.length || savedOverlay?.keyframes?.length);
+	const playheadSec = usePlayheadSeconds(playerRef, fps, tab === "layers" && overlayAnimated);
+	const selectedTime = selectedClip
+		? Math.min(Math.max(playheadSec - selectedClip.start, 0), selectedClip.duration)
+		: 0;
+	const setRawOverlay = (clipId: string, draft: OverlayDraft) => {
+		selectOverlay(clipId);
+		setOverlayDraft({ clipId, draft });
+	};
+	const saveOverlay = (clipId: string, draft: OverlayDraft) =>
+		actions.editOverlays
+			.mutateAsync({ op: "update", clipId, patch: draftToPatch(draft) })
+			.then(() => setOverlayDraft(null));
 
 	const script = useMemo(
 		() => (video.data ? scriptFromStoryboard(video.data.storyboard) : null),
@@ -359,12 +407,58 @@ export function VideoPage() {
 									playhead={() => (playerRef.current?.getCurrentFrame() ?? 0) / data.storyboard.fps}
 									editOverlays={(op) => actions.editOverlays.mutateAsync(op)}
 									pickMedia={() => actions.pickMedia.mutateAsync()}
+									value={savedOverlay ? effectiveDraft(savedOverlay, selectedTime) : null}
 									draft={
 										overlayDraft && overlayDraft.clipId === selectedOverlayId
-											? overlayDraft.draft
+											? effectiveDraft(overlayDraft.draft, selectedTime)
 											: null
 									}
-									onDraftChange={setOverlayDraft}
+									onDraftChange={(next) => {
+										if (!selectedOverlayId || !rawOverlay) return;
+										if (!next) setOverlayDraft(null);
+										else
+											setRawOverlay(
+												selectedOverlayId,
+												writeBack(rawOverlay, next, liveClipTime(selectedOverlayId)),
+											);
+									}}
+									applyDraft={() =>
+										selectedOverlayId && overlayDraft?.clipId === selectedOverlayId
+											? saveOverlay(selectedOverlayId, overlayDraft.draft)
+											: Promise.resolve()
+									}
+									animation={
+										selectedOverlayId && rawOverlay && selectedClip
+											? {
+													enabled: Boolean(rawOverlay.keyframes?.length),
+													time: selectedTime,
+													inside:
+														playheadSec >= selectedClip.start &&
+														playheadSec < selectedClip.start + selectedClip.duration,
+													keyframes: (rawOverlay.keyframes ?? []).map((k) => ({
+														at: k.at,
+														current: Math.abs(k.at - selectedTime) < KEYFRAME_TOLERANCE,
+													})),
+													onToggle: (on) =>
+														setRawOverlay(
+															selectedOverlayId,
+															toggleAnimation(rawOverlay, on, liveClipTime(selectedOverlayId)),
+														),
+													onAddHere: () =>
+														setRawOverlay(
+															selectedOverlayId,
+															addKeyframeHere(rawOverlay, liveClipTime(selectedOverlayId)),
+														),
+													onRemoveHere: () =>
+														setRawOverlay(
+															selectedOverlayId,
+															removeKeyframeHere(rawOverlay, liveClipTime(selectedOverlayId)),
+														),
+													onSeek: (at) =>
+														playerRef.current?.seekTo(Math.round((selectedClip.start + at) * fps)),
+												}
+											: undefined
+									}
 									saving={actions.editOverlays.isPending}
 									error={actions.editOverlays.error?.message ?? actions.pickMedia.error?.message}
 									locked={busy}
@@ -388,21 +482,22 @@ export function VideoPage() {
 										playerRef={playerRef}
 										selectedId={selectedOverlayId}
 										onSelect={selectOverlay}
-										baseDraft={(clipId) =>
-											overlayDraft?.clipId === clipId
-												? overlayDraft.draft
-												: overlayDraftOf(data.storyboard, clipId)
-										}
-										onDraftChange={(clipId, draft) => {
-											selectOverlay(clipId);
-											setOverlayDraft({ clipId, draft });
+										baseDraft={(clipId) => {
+											const raw = rawOverlayOf(clipId);
+											return raw ? effectiveDraft(raw, liveClipTime(clipId)) : null;
 										}}
-										onCommit={(clipId, draft) =>
-											actions.editOverlays
-												.mutateAsync({ op: "update", clipId, patch: draftToPatch(draft) })
-												.then(() => setOverlayDraft(null))
-												.catch(() => undefined)
-										}
+										onDraftChange={(clipId, edited) => {
+											const raw = rawOverlayOf(clipId);
+											if (raw) setRawOverlay(clipId, writeBack(raw, edited, liveClipTime(clipId)));
+										}}
+										onCommit={(clipId, edited) => {
+											const raw = rawOverlayOf(clipId);
+											if (raw)
+												void saveOverlay(
+													clipId,
+													writeBack(raw, edited, liveClipTime(clipId)),
+												).catch(() => undefined);
+										}}
 										disabled={
 											busy ||
 											scriptDirty ||

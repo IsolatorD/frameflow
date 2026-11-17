@@ -1,6 +1,7 @@
 import { Button } from "../../atoms/Button/Button";
 import { RangeField } from "../../atoms/RangeField/RangeField";
 import { SelectField } from "../../atoms/SelectField/SelectField";
+import { SwitchField } from "../../atoms/SwitchField/SwitchField";
 import { TextField } from "../../atoms/TextField/TextField";
 import type { TransitionDraft } from "../../molecules/SceneCard/SceneCardInterface";
 import { TRANSITION_OPTIONS } from "../../molecules/SceneStyleFields/SceneStyleFields.constants";
@@ -18,6 +19,7 @@ import type { OverlayDraft, OverlayInspectorProps } from "./OverlayInspectorInte
 /** Propiedades de la capa seleccionada; los cambios se ven en la vista previa antes de aplicarlos. */
 export function OverlayInspector({
 	value,
+	animation,
 	draft: draftProp,
 	onDraftChange,
 	onApply,
@@ -199,6 +201,65 @@ export function OverlayInspector({
 						/>
 					</div>
 				</Section>
+
+				{animation ? (
+					<Section
+						title="Animación"
+						description="Fotogramas clave: la capa pasa de uno a otro con una curva suave."
+					>
+						<div className="flex flex-col gap-3">
+							<SwitchField
+								label="Animar con fotogramas clave"
+								description="Mueve el cabezal y cambia posición, escala, giro u opacidad: cada cambio crea un fotograma en ese instante."
+								checked={animation.enabled}
+								onChange={animation.onToggle}
+							/>
+							{animation.enabled ? (
+								<>
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="text-xs text-zinc-400">
+											{animation.inside
+												? `Cabezal en ${secs(animation.time)} de la capa`
+												: "El cabezal está fuera de esta capa"}
+										</span>
+										{animation.keyframes.some((k) => k.current) ? (
+											<Button variant="ghost" onClick={animation.onRemoveHere}>
+												Quitar este fotograma
+											</Button>
+										) : (
+											<Button
+												variant="secondary"
+												disabled={!animation.inside}
+												onClick={animation.onAddHere}
+											>
+												◆ Fotograma aquí
+											</Button>
+										)}
+									</div>
+									<ul aria-label="Fotogramas clave" className="flex flex-wrap gap-1.5">
+										{animation.keyframes.map((k) => (
+											<li key={k.at}>
+												<button
+													type="button"
+													aria-pressed={k.current}
+													title="Ir a este fotograma"
+													onClick={() => animation.onSeek(k.at)}
+													className={`rounded-full px-2.5 py-1 font-mono text-xs ring-1 ${
+														k.current
+															? "bg-violet-500/20 text-violet-100 ring-violet-400"
+															: "text-zinc-300 ring-white/10 hover:bg-white/5"
+													}`}
+												>
+													◆ {secs(k.at)}
+												</button>
+											</li>
+										))}
+									</ul>
+								</>
+							) : null}
+						</div>
+					</Section>
+				) : null}
 
 				<Section title="Transiciones">
 					<div className="grid grid-cols-2 gap-4">

@@ -65,7 +65,13 @@ const Content = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => {
 };
 
 export const VisualClipView = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => (
-	<ClipLayer clipId={clip.id} transform={clip.transform} enter={clip.enter} exit={clip.exit}>
+	<ClipLayer
+		clipId={clip.id}
+		transform={clip.transform}
+		keyframes={clip.keyframes}
+		enter={clip.enter}
+		exit={clip.exit}
+	>
 		<Content clip={clip} theme={theme} />
 	</ClipLayer>
 );

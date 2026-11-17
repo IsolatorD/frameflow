@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	type Clip,
 	EPSILON,
+	keyframeSchema,
 	type Storyboard,
 	storyboardSchema,
 	type Track,
@@ -165,6 +166,8 @@ export const overlayPatchSchema = z
 			align: z.enum(["left", "center", "right"]),
 		}),
 		transform: transformSchema.required(),
+		/** Lista completa de fotogramas (vacía = sin animación). */
+		keyframes: z.array(keyframeSchema),
 		enter: transitionSchema.optional(),
 		exit: transitionSchema.optional(),
 		fit: z.enum(["cover", "contain"]),
@@ -204,6 +207,13 @@ export const updateOverlay = (sb: Storyboard, clipId: string, input: OverlayPatc
 		mapOverlay(sb, clipId, (clip) => {
 			const common = {
 				...(patch.transform ? { transform: patch.transform } : {}),
+				...(patch.keyframes
+					? {
+							keyframes: patch.keyframes.length
+								? [...patch.keyframes].sort((a, b) => a.at - b.at)
+								: undefined,
+						}
+					: {}),
 				...("enter" in patch ? { enter: patch.enter } : {}),
 				...("exit" in patch ? { exit: patch.exit } : {}),
 			};
@@ -276,7 +286,16 @@ export const moveOverlay = (sb: Storyboard, clipId: string, start: number): Stor
 export const trimOverlay = (sb: Storyboard, clipId: string, duration: number): Storyboard => {
 	const limits = overlayLimits(sb, clipId);
 	const next = round(Math.min(Math.max(duration, limits.minDuration), limits.maxDuration));
-	return storyboardSchema.parse(mapOverlay(sb, clipId, (c) => ({ ...c, duration: next })));
+	// Los fotogramas que quedan fuera del clip recortado sobran.
+	return storyboardSchema.parse(
+		mapOverlay(sb, clipId, (c) => ({
+			...c,
+			duration: next,
+			keyframes: c.keyframes?.some((k) => k.at > next)
+				? c.keyframes.filter((k) => k.at <= next + 1e-6)
+				: c.keyframes,
+		})),
+	);
 };
 
 /** Duplica una capa justo a continuación (o en otra capa si no cabe). */

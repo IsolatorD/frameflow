@@ -41,11 +41,24 @@ export const transitionSchema = z.object({
 	duration: z.number().positive().default(0.4),
 });
 
+/**
+ * Fotograma clave de una capa: su posición/aspecto en un instante (segundos desde el inicio del
+ * clip). Entre dos fotogramas se interpola; antes del primero y después del último se mantiene.
+ */
+export const keyframeSchema = z.object({
+	at: seconds,
+	transform: transformSchema,
+	/** Curva hasta este fotograma desde el anterior. */
+	easing: z.enum(["linear", "ease"]).default("ease"),
+});
+
 const visual = {
 	...timing,
 	/** Nombre para mostrar en el editor (p. ej. el archivo original de una imagen). */
 	label: z.string().optional(),
 	transform: transformSchema.optional(),
+	/** Animación de la capa; si hay fotogramas, mandan sobre `transform`. */
+	keyframes: z.array(keyframeSchema).optional(),
 	enter: transitionSchema.optional(),
 	exit: transitionSchema.optional(),
 };
@@ -226,6 +239,7 @@ export const storyboardSchema = z
 	});
 
 export type Transform = z.infer<typeof transformSchema>;
+export type Keyframe = z.infer<typeof keyframeSchema>;
 export type Transition = z.infer<typeof transitionSchema>;
 export type SceneClip = z.infer<typeof sceneClipSchema>;
 export type TextClip = z.infer<typeof textClipSchema>;

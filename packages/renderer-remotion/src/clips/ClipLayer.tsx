@@ -1,4 +1,5 @@
-import type { Transform, Transition } from "@frameflow/core/storyboard";
+import type { Keyframe, Transform, Transition } from "@frameflow/core/storyboard";
+import { transformAt } from "@frameflow/core/storyboard/keyframes";
 import type { ReactNode } from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 
@@ -35,6 +36,7 @@ const effect = (transition: Transition | undefined, p: number) => {
 export const ClipLayer = ({
 	clipId,
 	transform,
+	keyframes,
 	enter,
 	exit,
 	children,
@@ -42,13 +44,16 @@ export const ClipLayer = ({
 	/** Marca el clip en el DOM (data-clip-id): el editor mide su caja para arrastrarlo. */
 	clipId?: string;
 	transform?: Transform;
+	/** Animación: si hay fotogramas, la transformación se calcula en cada instante. */
+	keyframes?: readonly Keyframe[];
 	enter?: Transition;
 	exit?: Transition;
 	children: ReactNode;
 }) => {
 	const frame = useCurrentFrame();
 	const { fps, width, height, durationInFrames } = useVideoConfig();
-	const t = transform ?? { x: 0.5, y: 0.5, scale: 1, rotation: 0, opacity: 1 };
+	// El fotograma es relativo al inicio del clip (estamos dentro de su <Sequence>).
+	const t = transformAt({ transform, keyframes }, frame / fps);
 	const inFx = effect(enter, progress(frame, enter, fps));
 	const outFx = effect(exit, progress(durationInFrames - frame, exit, fps));
 

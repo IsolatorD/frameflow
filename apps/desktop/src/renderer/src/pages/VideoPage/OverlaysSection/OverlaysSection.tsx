@@ -1,15 +1,13 @@
 import type { OverlayOp } from "@frameflow/core/script/overlays";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import { OverlayInspector } from "@frameflow/ui/src/organisms/OverlayInspector/OverlayInspector";
-import type { OverlayDraft } from "@frameflow/ui/src/organisms/OverlayInspector/OverlayInspectorInterface";
+import type {
+	OverlayAnimationProps,
+	OverlayDraft,
+} from "@frameflow/ui/src/organisms/OverlayInspector/OverlayInspectorInterface";
 import { OverlayList } from "@frameflow/ui/src/organisms/OverlayList/OverlayList";
-import { useCallback, useMemo, useState } from "react";
-import {
-	COLOR_OPTIONS,
-	draftToPatch,
-	overlayDraftOf,
-	overlayItems,
-} from "./OverlaysSection.constants";
+import { useMemo, useState } from "react";
+import { COLOR_OPTIONS, overlayItems } from "./OverlaysSection.constants";
 
 /** Pestaña "Capas": añadir textos, imágenes y videos encima del video y editarlos. */
 export function OverlaysSection({
@@ -18,8 +16,11 @@ export function OverlaysSection({
 	onSelect,
 	playhead,
 	editOverlays,
+	applyDraft,
 	pickMedia,
+	value: savedValue,
 	draft: pending,
+	animation,
 	onDraftChange,
 	saving,
 	error,
@@ -31,19 +32,21 @@ export function OverlaysSection({
 	/** Segundo actual del reproductor (donde se añaden las capas). */
 	playhead: () => number;
 	editOverlays: (op: OverlayOp) => Promise<{ clipId: string | null }>;
+	/** Guarda el borrador real (con sus fotogramas) de la capa seleccionada. */
+	applyDraft: () => Promise<unknown>;
 	pickMedia: () => Promise<Extract<OverlayOp, { op: "add" }>["item"] | null>;
-	/** Borrador en curso de la capa seleccionada (lo comparten el inspector y la vista previa). */
+	/** La capa seleccionada tal como se ve en el instante del cabezal. */
+	value: OverlayDraft | null;
+	/** Borrador en curso (también en el instante del cabezal); null = sin cambios. */
 	draft: OverlayDraft | null;
-	onDraftChange: (patch: { clipId: string; draft: OverlayDraft } | null) => void;
+	animation?: OverlayAnimationProps;
+	/** Recibe cambios "del instante"; quien llama los convierte en fotogramas si hace falta. */
+	onDraftChange: (draft: OverlayDraft | null) => void;
 	saving: boolean;
 	error?: string;
 	locked: boolean;
 }) {
 	const items = useMemo(() => overlayItems(storyboard), [storyboard]);
-	const draft = useMemo(
-		() => (selectedId ? overlayDraftOf(storyboard, selectedId) : null),
-		[storyboard, selectedId],
-	);
 	const [adding, setAdding] = useState(false);
 	const [addError, setAddError] = useState<string>();
 
@@ -53,11 +56,6 @@ export function OverlaysSection({
 	};
 	// El error ya lo muestra el inspector (estado de la mutación): aquí solo se evita el rechazo suelto.
 	const runQuietly = (op: OverlayOp) => run(op).catch(() => undefined);
-	const reportDraft = useCallback(
-		(next: OverlayDraft | null) =>
-			onDraftChange(next && selectedId ? { clipId: selectedId, draft: next } : null),
-		[onDraftChange, selectedId],
-	);
 	const add = async (getItem: () => Promise<Extract<OverlayOp, { op: "add" }>["item"] | null>) => {
 		setAdding(true);
 		setAddError(undefined);
@@ -83,18 +81,15 @@ export function OverlaysSection({
 				locked={locked}
 				error={addError}
 			/>
-			{selectedId && draft ? (
+			{selectedId && savedValue ? (
 				<OverlayInspector
 					key={selectedId}
-					value={draft}
+					value={savedValue}
+					animation={animation}
 					colorOptions={COLOR_OPTIONS}
 					draft={pending}
-					onApply={(next) =>
-						void run({ op: "update", clipId: selectedId, patch: draftToPatch(next) })
-							.then(() => onDraftChange(null))
-							.catch(() => undefined)
-					}
-					onDraftChange={reportDraft}
+					onApply={() => void applyDraft().catch(() => undefined)}
+					onDraftChange={onDraftChange}
 					onDuplicate={() => void runQuietly({ op: "duplicate", clipId: selectedId })}
 					onDelete={() => void runQuietly({ op: "delete", clipId: selectedId })}
 					applying={saving}

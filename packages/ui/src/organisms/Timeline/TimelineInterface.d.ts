@@ -8,6 +8,8 @@ export interface TimelineClip {
 	kind: TimelineClipKind;
 	/** Algo que atender (p. ej. escena sin voz). */
 	warning?: boolean;
+	/** Instantes marcados dentro del clip (segundos desde su inicio), p. ej. fotogramas clave. */
+	markers?: readonly number[];
 	/** Qué se puede hacer con el clip desde la línea de tiempo. */
 	editable?: {
 		move?: boolean;

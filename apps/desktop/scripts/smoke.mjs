@@ -395,6 +395,47 @@ try {
 		"Las guías de centro deben desaparecer al soltar",
 	);
 
+	// Fotogramas clave: animar el texto de una posición a otra y comprobar que interpola.
+	const seekTo = async (seconds) => {
+		await page.getByLabel("Posición en el video").fill(String(seconds));
+		await page.waitForTimeout(300);
+	};
+	const textTitle = (await clip(/^¡Increíble!/).getAttribute("title")) ?? "";
+	const [, mm, ss] = /· (\d+):(\d+)/.exec(textTitle) ?? [];
+	const textStart = Number(mm) * 60 + Number(ss) + 0.2; // dentro de la capa, aunque empiece en x,y s
+	await seekTo(textStart);
+	await page.getByText("Animar con fotogramas clave", { exact: true }).click();
+	before = await versionText();
+	await page.getByRole("button", { name: "Aplicar" }).click();
+	await waitVersionAfter(before);
+	await page.getByRole("list", { name: "Fotogramas clave" }).getByRole("button").first().waitFor();
+	const xStart = await output("overlay-x");
+
+	await seekTo(textStart + 1.5);
+	before = await versionText();
+	await dragBy(box, 80); // en este instante: crea el segundo fotograma
+	await waitVersionAfter(before);
+	expect(
+		(await page.getByRole("list", { name: "Fotogramas clave" }).getByRole("button").count()) === 2,
+		"Arrastrar en otro instante debería crear un segundo fotograma",
+	);
+	expect(
+		(await clip(/^¡Increíble!/)
+			.locator("[data-keyframe-marker]")
+			.count()) === 2,
+		"La línea de tiempo debería marcar los dos fotogramas",
+	);
+	const xEnd = await output("overlay-x");
+	await seekTo(textStart + 0.75);
+	const xMid = await output("overlay-x");
+	const pctOf = (v) => Number.parseInt(v ?? "0", 10);
+	expect(
+		pctOf(xMid) > Math.min(pctOf(xStart), pctOf(xEnd)) &&
+			pctOf(xMid) < Math.max(pctOf(xStart), pctOf(xEnd)),
+		`A mitad de camino debería interpolar: ${xStart} → ${xMid} → ${xEnd}`,
+	);
+	await page.screenshot({ path: join(shots, "11e-fotogramas-clave.png") });
+
 	await page.locator("[data-scroll-container]").evaluate((el) => el.scrollTo({ top: 0 }));
 	await page.waitForTimeout(500);
 	await page.screenshot({ path: join(shots, "11d-capas.png") });

@@ -15,7 +15,8 @@
 		"./video": "./src/video/video.ts",
 		"./script/quality": "./src/script/quality.ts",
 		"./script/edit": "./src/script/edit.ts",
-		"./script/overlays": "./src/script/overlays.ts"
+		"./script/overlays": "./src/script/overlays.ts",
+		"./storyboard/keyframes": "./src/storyboard/keyframes.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
