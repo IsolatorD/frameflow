@@ -10,10 +10,12 @@
 		"preview": "electron-vite preview",
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
 		"smoke": "electron-vite build && node scripts/smoke.mjs",
-		"icons": "node scripts/build-icons.mjs"
+		"icons": "node scripts/build-icons.mjs",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^1.9.0",
+		"@echogarden/espeak-ng-emscripten": "0.3.5",
 		"@frameflow/core": "workspace:*",
 		"@frameflow/db": "workspace:*",
 		"@frameflow/renderer-remotion": "workspace:*",
@@ -25,6 +27,7 @@
 		"@remotion/renderer": "4.0.543",
 		"@tanstack/react-query": "^5.107.1",
 		"drizzle-orm": "~0.45.4",
+		"onnxruntime-node": "1.31.1",
 		"openai": "^7.57.0",
 		"react": "^19.3.1",
 		"react-dom": "^19.3.1",
@@ -43,5 +46,6 @@
 		"playwright-core": "^1.65.1",
 		"tailwindcss": "^4.3.5",
 		"vite": "^8.3.8"
-	}
+	},
+	"license": "GPL-3.0-or-later"
 }

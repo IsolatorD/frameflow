@@ -35,7 +35,7 @@ import {
 import type { ProjectsRepository } from "@frameflow/db/projects";
 import type { VideosRepository } from "@frameflow/db/videos";
 import { renderStoryboard } from "./render";
-import { synthesize } from "./tts";
+import type { VoiceEngine } from "./voice/kokoro";
 
 type Deps = {
 	projects: ProjectsRepository;
@@ -44,7 +44,8 @@ type Deps = {
 	llm: () => Promise<ConfiguredLlm>;
 	/** Carpeta de datos: los proyectos viven en <dataDir>/projects/<slug>/. */
 	dataDir: string;
-	ttsDir: string;
+	/** Voz (Kokoro en Node). */
+	voice: VoiceEngine;
 	rendererEntry: string;
 	/** URL del servidor de medios que sirve <dataDir>. */
 	mediaBaseUrl: string;
@@ -185,9 +186,13 @@ export function createVideoPipeline(deps: Deps) {
 		const voice = project.brandKit.voices[video.language];
 		if (!voice) throw new Error(`La marca no tiene voz para el idioma ${video.language}`);
 		const relDir = join("videos", video.id, "voice");
-		progress(null, "Preparando la voz (la primera vez descarga los modelos)…");
-		const results = await synthesize(
-			deps.ttsDir,
+		progress(
+			null,
+			deps.voice.modelReady()
+				? "Preparando la voz…"
+				: "Preparando la voz (la primera vez descarga el modelo)…",
+		);
+		const results = await deps.voice.synthesize(
 			{
 				language: video.language,
 				voiceId: voice.voiceId,
@@ -195,13 +200,22 @@ export function createVideoPipeline(deps: Deps) {
 				outDir: join(projectDir(project), relDir),
 				items: missing.map((scene) => ({ id: scene.id ?? "", text: scene.narration })),
 			},
-			(done, total) =>
-				progress(
-					done / total,
-					missing.length === script.scenes.length
-						? `Voz de la escena ${done} de ${total}`
-						: `Voz de las escenas cambiadas: ${done} de ${total}`,
-				),
+			(event) => {
+				if (event.kind === "download") {
+					const { done, total } = event.progress;
+					progress(
+						total ? done / total : null,
+						`Descargando el modelo de voz (solo la primera vez): ${formatMb(done)}${total ? ` de ${formatMb(total)}` : ""}`,
+					);
+				} else {
+					progress(
+						event.done / event.total,
+						missing.length === script.scenes.length
+							? `Voz de la escena ${event.done} de ${event.total}`
+							: `Voz de las escenas cambiadas: ${event.done} de ${event.total}`,
+					);
+				}
+			},
 			signal,
 		);
 		const voices: Record<string, SceneVoice> = Object.fromEntries(
@@ -437,3 +451,5 @@ export function createVideoPipeline(deps: Deps) {
 }
 
 export type VideoPipeline = ReturnType<typeof createVideoPipeline>;
+
+const formatMb = (bytes: number) => `${Math.round(bytes / 1024 ** 2)} MB`;

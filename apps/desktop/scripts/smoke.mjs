@@ -630,6 +630,15 @@ try {
 		const [otherModel, otherLabel] = Object.entries(LOCAL_MODELS).find(([id]) => id !== firstModel);
 		await modelSelect.selectOption(otherModel);
 		await fileHas("ai-settings.json", otherModel, true, "No se guardó el modelo elegido");
+		await page.getByRole("button", { name: `Descargar ${otherLabel}` }).waitFor();
+		const noSpace = await page.getByText(/Libera espacio antes de descargar/).isVisible();
+		if (noSpace)
+			console.log(
+				"Aviso: sin espacio en disco para la descarga simulada; se omite la cancelación.",
+			);
+	}
+	if (fakeOllama && !(await page.getByText(/Libera espacio antes de descargar/).isVisible())) {
+		const [, otherLabel] = Object.entries(LOCAL_MODELS).find(([id]) => id !== firstModel);
 		await page.getByRole("button", { name: `Descargar ${otherLabel}` }).click();
 		await page.getByRole("progressbar", { name: `Descargar ${otherLabel}` }).waitFor();
 		await page.getByRole("button", { name: "Cancelar" }).click();

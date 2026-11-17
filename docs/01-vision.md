@@ -35,7 +35,7 @@ Tema + preset de nicho
    ▼                      ▼
 [TTS / voz propia]   [Componentes Remotion por estilo]
    │                      │
-   └──► [Whisper] tiempos de palabras ──► subtítulos sincronizados
+   └──► tiempos de palabras (duraciones de Kokoro) ──► subtítulos sincronizados
                           │
                           ▼
               Editor (línea de tiempo) edita el JSON
@@ -56,7 +56,8 @@ y Remotion lo renderiza. Nada se "quema" hasta el render final.
 - **LLM**: Ollama local (Llama / Qwen / Gemma) con opción de API (Claude, etc.).
 - **TTS**: Kokoro (Apache-2.0, multi-idioma, buena calidad). Piper como alternativa rápida
   (GPL-3, revisar licencia de cada voz). Evitar XTTS v2 (licencia no comercial).
-- **Subtítulos / sincronía**: Whisper (whisper.cpp) para obtener tiempos por palabra.
+- **Subtítulos / sincronía**: ~~Whisper~~ → desde 2026-11-17, las duraciones por fonema de Kokoro
+  ajustadas a los silencios (ver `docs/05-voz.md`).
 
 ## Decisión 2026-11-16 (adoptada): proyectos/canales como eje central
 

@@ -7,6 +7,15 @@ export default defineConfig({
 	main: {
 		// Los paquetes del monorepo (@frameflow/*) se empaquetan; el resto queda en node_modules.
 		plugins: [externalizeDepsPlugin({ exclude: ["@frameflow/core", "@frameflow/db"] })],
+		build: {
+			rollupOptions: {
+				input: {
+					index: resolve("src/main/index.ts"),
+					// eSpeak NG (GPL-3.0) va en su propio proceso: ver src/main/espeak-process.ts.
+					"espeak-process": resolve("src/main/espeak-process.ts"),
+				},
+			},
+		},
 	},
 	preload: {
 		plugins: [externalizeDepsPlugin()],

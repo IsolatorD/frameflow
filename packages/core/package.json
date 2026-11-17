@@ -19,7 +19,10 @@
 		"./storyboard/keyframes": "./src/storyboard/keyframes.ts",
 		"./ai/catalog": "./src/ai/catalog.ts",
 		"./ai/providers": "./src/ai/providers/index.ts",
-		"./ai/localRuntime": "./src/ai/localRuntime.ts"
+		"./ai/localRuntime": "./src/ai/localRuntime.ts",
+		"./voice/phonemes": "./src/voice/phonemes.ts",
+		"./voice/timing": "./src/voice/timing.ts",
+		"./voice/kokoroModel": "./src/voice/kokoroModel.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

@@ -11,6 +11,7 @@ import { createAiSettingsStore } from "./services/aiSettings";
 import { createLocalAi } from "./services/localAi/localAi";
 import { startMediaServer } from "./services/mediaServer";
 import { createVideoPipeline } from "./services/videoPipeline";
+import { createVoiceEngine } from "./services/voice/kokoro";
 
 // Carpeta de datos del usuario (BD + proyectos). FRAMEFLOW_HOME permite aislarla (tests, pruebas).
 const dataDir = process.env.FRAMEFLOW_HOME ?? join(homedir(), "Frameflow");
@@ -18,7 +19,6 @@ const dataDir = process.env.FRAMEFLOW_HOME ?? join(homedir(), "Frameflow");
 // TODO(empaquetado): copiarlos como extraResources y resolverlos desde process.resourcesPath.
 const repoRoot = join(app.getAppPath(), "../..");
 const migrationsFolder = join(repoRoot, "packages/db/drizzle");
-const ttsDir = join(repoRoot, "packages/tts");
 const rendererEntry = join(repoRoot, "packages/renderer-remotion/src/index.ts");
 // Icono de la app (lo genera `pnpm icons` desde brand/). Empaquetada, lo pone build/icon.icns.
 const appIcon = join(app.getAppPath(), "resources/icon.png");
@@ -90,7 +90,10 @@ app.whenReady().then(async () => {
 		videos,
 		llm: () => ai.current(),
 		dataDir,
-		ttsDir,
+		voice: createVoiceEngine({
+			dataDir,
+			espeakScript: join(import.meta.dirname, "espeak-process.js"),
+		}),
 		rendererEntry,
 		mediaBaseUrl: media.baseUrl,
 		emit: (event) => {
