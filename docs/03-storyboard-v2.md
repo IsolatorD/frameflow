@@ -111,17 +111,20 @@ pistas `track-overlay-N` ("Capa N"). Las demás pistas las genera el guion y no 
 
 - Cada capa visual puede tener `keyframes: [{ at, transform, easing }]` (`at` en segundos desde el
   inicio del clip). `transformAt` (`core/storyboard/keyframes.ts`) interpola posición, escala, giro
-  y opacidad con curva suave (`ease`) o lineal; antes del primero y después del último se mantiene.
+  y opacidad con la curva de cada fotograma (`ease` suave, `ease-in` acelerar, `ease-out` frenar,
+  `linear`; la curva es la del tramo que llega a ese fotograma); antes del primero y después del
+  último se mantiene.
   Si hay fotogramas, mandan sobre `transform`. El renderer la evalúa en cada fotograma.
 - En el editor (pestaña Capas → "Animar con fotogramas clave"): el inspector y la vista previa
   muestran la capa en el instante del cabezal; cambiar posición/escala/giro/opacidad ahí (deslizadores,
   arrastre o flechas) crea o ajusta el fotograma de ese instante. La lista permite saltar a cada
-  fotograma o quitarlo, y la línea de tiempo los marca con rombos.
+  fotograma, quitarlo o elegir su curva ("Curva hasta este fotograma"), y la línea de tiempo los
+  marca con rombos.
 - Recortar una capa descarta los fotogramas que quedan fuera; moverla los conserva (son relativos).
 
 ## Pendiente para fases siguientes
 
-- Curva por fotograma elegible en la interfaz (hoy siempre suave) y fotogramas clave en escenas.
+- Fotogramas clave en escenas.
 - v3: fotogramas clave (`transform` animado), filtros, velocidad variable, máscaras.
 - Rutas de recursos del proyecto: hoy `src` relativo se sirve con `staticFile`; la app de escritorio
   servirá la carpeta del proyecto.

@@ -8,13 +8,14 @@ import { TRANSITION_OPTIONS } from "../../molecules/SceneStyleFields/SceneStyleF
 import { Section } from "../../molecules/Section/Section";
 import {
 	ALIGN_OPTIONS,
+	EASING_OPTIONS,
 	FIT_OPTIONS,
 	pct,
 	secs,
 	times,
 	WEIGHT_OPTIONS,
 } from "./OverlayInspector.constants";
-import type { OverlayDraft, OverlayInspectorProps } from "./OverlayInspectorInterface";
+import type { EasingDraft, OverlayDraft, OverlayInspectorProps } from "./OverlayInspectorInterface";
 
 /** Propiedades de la capa seleccionada; los cambios se ven en la vista previa antes de aplicarlos. */
 export function OverlayInspector({
@@ -236,6 +237,20 @@ export function OverlayInspector({
 											</Button>
 										)}
 									</div>
+									{animation.current ? (
+										<SelectField
+											id="overlay-easing"
+											label="Curva hasta este fotograma"
+											value={animation.current.easing}
+											options={EASING_OPTIONS}
+											onChange={(v) => animation.onEasingChange(v as EasingDraft)}
+											hint={
+												animation.current.first
+													? "Es el primer fotograma: la curva se usará si añades otro antes."
+													: "Cómo se mueve la capa desde el fotograma anterior hasta este."
+											}
+										/>
+									) : null}
 									<ul aria-label="Fotogramas clave" className="flex flex-wrap gap-1.5">
 										{animation.keyframes.map((k) => (
 											<li key={k.at}>

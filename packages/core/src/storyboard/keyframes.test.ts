@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { addOverlay, trimOverlay, updateOverlay } from "../script/overlays";
 import { assembleStoryboard, starterScript } from "../script/script";
-import { keyframeAt, removeKeyframe, transformAt, upsertKeyframe } from "./keyframes";
+import {
+	EASINGS,
+	keyframeAt,
+	removeKeyframe,
+	setKeyframeEasing,
+	transformAt,
+	upsertKeyframe,
+} from "./keyframes";
 import { findClip } from "./timeline";
 
 const T = (x: number, scale = 1, opacity = 1) => ({ x, y: 0.5, scale, rotation: 0, opacity });
@@ -30,6 +37,28 @@ describe("fotogramas clave", () => {
 		expect(transformAt({ keyframes }, 0.1).x).toBeLessThan(0.1);
 		expect(transformAt({ keyframes }, 0.5).x).toBeCloseTo(0.5);
 		expect(transformAt({ keyframes }, 0.9).x).toBeGreaterThan(0.9);
+	});
+
+	it("cada curva empieza en 0, acaba en 1 y tiene su forma", () => {
+		for (const curve of Object.values(EASINGS)) {
+			expect(curve(0)).toBe(0);
+			expect(curve(1)).toBe(1);
+		}
+		expect(EASINGS["ease-in"](0.25)).toBeLessThan(0.25); // empieza lenta
+		expect(EASINGS["ease-out"](0.25)).toBeGreaterThan(0.25); // empieza rápida
+		expect(EASINGS.linear(0.25)).toBe(0.25);
+	});
+
+	it("la curva de un fotograma se puede cambiar y manda en el tramo que llega a él", () => {
+		const keyframes = setKeyframeEasing(
+			upsertKeyframe(upsertKeyframe([], 0, T(0)), 1, T(1)),
+			1,
+			"linear",
+		);
+		expect(keyframes[1]?.easing).toBe("linear");
+		expect(transformAt({ keyframes }, 0.25).x).toBeCloseTo(0.25);
+		const eased = setKeyframeEasing(keyframes, 1, "ease-out");
+		expect(transformAt({ keyframes: eased }, 0.25).x).toBeGreaterThan(0.5);
 	});
 
 	it("poner un fotograma en el mismo instante lo reemplaza; quitarlo lo borra", () => {

@@ -436,6 +436,33 @@ try {
 	);
 	await page.screenshot({ path: join(shots, "11e-fotogramas-clave.png") });
 
+	// Curva: con "Lineal" en el segundo fotograma, a una fracción p del tramo la capa está en p.
+	const keyframeChips = page.getByRole("list", { name: "Fotogramas clave" }).getByRole("button");
+	const ruler = page.getByLabel("Posición en el video");
+	await keyframeChips.nth(0).click();
+	await page.waitForTimeout(300);
+	const t1 = Number(await ruler.inputValue());
+	await keyframeChips.nth(1).click();
+	await page.waitForTimeout(300);
+	const t2 = Number(await ruler.inputValue());
+	await page.getByLabel("Curva hasta este fotograma").selectOption("linear");
+	before = await versionText();
+	await page.getByRole("button", { name: "Aplicar" }).click();
+	await waitVersionAfter(before);
+	await seekTo(t1 + 0.2 * (t2 - t1));
+	const p = (Number(await ruler.inputValue()) - t1) / (t2 - t1); // la regla redondea a décimas
+	const expectedLinear = pctOf(xStart) + p * (pctOf(xEnd) - pctOf(xStart));
+	const xLinear = pctOf(await output("overlay-x"));
+	expect(
+		Math.abs(xLinear - expectedLinear) <= 2,
+		`Con curva lineal, a ${Math.round(p * 100)} % del tramo se esperaba ≈${expectedLinear.toFixed(1)} % y hay ${xLinear} %`,
+	);
+	await keyframeChips.nth(1).click();
+	expect(
+		(await page.getByLabel("Curva hasta este fotograma").inputValue()) === "linear",
+		"La curva elegida no se guardó",
+	);
+
 	await page.locator("[data-scroll-container]").evaluate((el) => el.scrollTo({ top: 0 }));
 	await page.waitForTimeout(500);
 	await page.screenshot({ path: join(shots, "11d-capas.png") });

@@ -48,8 +48,11 @@ export const transitionSchema = z.object({
 export const keyframeSchema = z.object({
 	at: seconds,
 	transform: transformSchema,
-	/** Curva hasta este fotograma desde el anterior. */
-	easing: z.enum(["linear", "ease"]).default("ease"),
+	/**
+	 * Curva hasta este fotograma desde el anterior: suave (lenta al empezar y al terminar),
+	 * acelerar (lenta al empezar), frenar (lenta al terminar) o lineal (ritmo constante).
+	 */
+	easing: z.enum(["ease", "ease-in", "ease-out", "linear"]).default("ease"),
 });
 
 const visual = {
@@ -240,6 +243,7 @@ export const storyboardSchema = z
 
 export type Transform = z.infer<typeof transformSchema>;
 export type Keyframe = z.infer<typeof keyframeSchema>;
+export type Easing = Keyframe["easing"];
 export type Transition = z.infer<typeof transitionSchema>;
 export type SceneClip = z.infer<typeof sceneClipSchema>;
 export type TextClip = z.infer<typeof textClipSchema>;

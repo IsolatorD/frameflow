@@ -18,3 +18,10 @@ export const WEIGHT_OPTIONS = [
 export const pct = (v: number) => `${Math.round(v * 100)}%`;
 export const times = (v: number) => `${v.toFixed(2)}×`;
 export const secs = (v: number) => `${v.toFixed(1).replace(".", ",")} s`;
+
+export const EASING_OPTIONS = [
+	{ value: "ease", label: "Suave (lenta al empezar y al terminar)" },
+	{ value: "ease-out", label: "Frenar (rápida al empezar)" },
+	{ value: "ease-in", label: "Acelerar (lenta al empezar)" },
+	{ value: "linear", label: "Lineal (ritmo constante)" },
+] as const;

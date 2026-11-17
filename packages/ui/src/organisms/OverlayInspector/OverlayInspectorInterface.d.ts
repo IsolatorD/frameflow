@@ -9,11 +9,13 @@ export interface OverlayTransformDraft {
 	opacity: number;
 }
 
+export type EasingDraft = "ease" | "ease-in" | "ease-out" | "linear";
+
 export interface OverlayKeyframeDraft {
 	/** Segundos desde el inicio de la capa. */
 	at: number;
 	transform: OverlayTransformDraft;
-	easing: "linear" | "ease";
+	easing: EasingDraft;
 }
 
 /** Lo editable de una capa (texto, imagen o video). */
@@ -48,6 +50,9 @@ export interface OverlayAnimationProps {
 	/** ¿El cabezal está dentro de la capa? */
 	inside: boolean;
 	keyframes: readonly { at: number; current: boolean }[];
+	/** El fotograma bajo el cabezal (si hay): su curva de llegada y si es el primero. */
+	current: { easing: EasingDraft; first: boolean } | null;
+	onEasingChange: (easing: EasingDraft) => void;
 	onToggle: (enabled: boolean) => void;
 	onAddHere: () => void;
 	onRemoveHere: () => void;

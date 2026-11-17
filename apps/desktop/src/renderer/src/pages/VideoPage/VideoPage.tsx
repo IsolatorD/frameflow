@@ -7,7 +7,7 @@ import {
 	videoSettingsFromStoryboard,
 } from "@frameflow/core/script";
 import { updateOverlay } from "@frameflow/core/script/overlays";
-import { KEYFRAME_TOLERANCE } from "@frameflow/core/storyboard/keyframes";
+import { KEYFRAME_TOLERANCE, setKeyframeEasing } from "@frameflow/core/storyboard/keyframes";
 import { findClip } from "@frameflow/core/storyboard/timeline";
 import { Badge } from "@frameflow/ui/src/atoms/Badge/Badge";
 import { Button } from "@frameflow/ui/src/atoms/Button/Button";
@@ -121,6 +121,10 @@ export function VideoPage() {
 	const selectedTime = selectedClip
 		? Math.min(Math.max(playheadSec - selectedClip.start, 0), selectedClip.duration)
 		: 0;
+	/** Fotograma bajo el cabezal en la capa seleccionada (los fotogramas ya vienen ordenados). */
+	const currentKeyframe = rawOverlay?.keyframes?.find(
+		(k) => Math.abs(k.at - selectedTime) < KEYFRAME_TOLERANCE,
+	);
 	const setRawOverlay = (clipId: string, draft: OverlayDraft) => {
 		selectOverlay(clipId);
 		setOverlayDraft({ clipId, draft });
@@ -439,6 +443,22 @@ export function VideoPage() {
 														at: k.at,
 														current: Math.abs(k.at - selectedTime) < KEYFRAME_TOLERANCE,
 													})),
+													current: currentKeyframe
+														? {
+																easing: currentKeyframe.easing,
+																first: currentKeyframe.at === rawOverlay.keyframes?.[0]?.at,
+															}
+														: null,
+													onEasingChange: (easing) =>
+														currentKeyframe &&
+														setRawOverlay(selectedOverlayId, {
+															...rawOverlay,
+															keyframes: setKeyframeEasing(
+																rawOverlay.keyframes ?? [],
+																currentKeyframe.at,
+																easing,
+															),
+														}),
 													onToggle: (on) =>
 														setRawOverlay(
 															selectedOverlayId,

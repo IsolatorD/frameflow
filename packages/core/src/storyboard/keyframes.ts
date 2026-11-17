@@ -1,4 +1,4 @@
-import type { Keyframe, Transform } from "./schema";
+import type { Easing, Keyframe, Transform } from "./schema";
 
 // Animación por fotogramas clave: funciones puras que usan el renderer, la vista previa y el editor.
 
@@ -6,7 +6,13 @@ export const DEFAULT_TRANSFORM: Transform = { x: 0.5, y: 0.5, scale: 1, rotation
 /** Dos fotogramas a menos de esto se consideran el mismo instante. */
 export const KEYFRAME_TOLERANCE = 0.05;
 
-const easeInOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
+/** Curvas de animación (progreso 0–1 → progreso con curva 0–1). Cúbicas, como en CSS. */
+export const EASINGS: Record<Easing, (p: number) => number> = {
+	ease: (p) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2),
+	"ease-in": (p) => p * p * p,
+	"ease-out": (p) => 1 - (1 - p) ** 3,
+	linear: (p) => p,
+};
 const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
 
 const sorted = (keyframes: readonly Keyframe[]) => [...keyframes].sort((a, b) => a.at - b.at);
@@ -27,7 +33,7 @@ export const transformAt = (
 	const a = frames[i - 1] as Keyframe;
 	const b = frames[i] as Keyframe;
 	const raw = (t - a.at) / Math.max(1e-6, b.at - a.at);
-	const p = b.easing === "ease" ? easeInOut(raw) : raw;
+	const p = EASINGS[b.easing](raw);
 	return {
 		x: lerp(a.transform.x, b.transform.x, p),
 		y: lerp(a.transform.y, b.transform.y, p),
@@ -58,3 +64,11 @@ export const removeKeyframe = (keyframes: readonly Keyframe[], at: number): Keyf
 /** Fotograma en el instante `at` (con tolerancia), si existe. */
 export const keyframeAt = (keyframes: readonly Keyframe[] | undefined, at: number) =>
 	keyframes?.find((k) => Math.abs(k.at - at) < KEYFRAME_TOLERANCE);
+
+/** Cambia la curva con la que se llega al fotograma del instante `at`. */
+export const setKeyframeEasing = (
+	keyframes: readonly Keyframe[],
+	at: number,
+	easing: Easing,
+): Keyframe[] =>
+	keyframes.map((k) => (Math.abs(k.at - at) < KEYFRAME_TOLERANCE ? { ...k, easing } : k));
