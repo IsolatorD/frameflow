@@ -10,11 +10,13 @@ import {
 	aiSettingsSchema,
 	type CloudProviderId,
 	defaultAiSettings,
+	defaultLocalModel,
 	isCloudProvider,
 	type KeyStorage,
 	keyHint,
 	recommendLocalModel,
 	type SystemInfo,
+	systemInfoFrom,
 } from "@frameflow/core/ai/catalog";
 import { type ConfiguredLlm, createCloudLlm, createLlm } from "@frameflow/core/ai/providers";
 import { type LlmStatus, OllamaProvider } from "@frameflow/core/script/ai";
@@ -54,9 +56,15 @@ export function createAiSettingsStore(opts: {
 		}
 	};
 
+	const system = (): SystemInfo =>
+		systemInfoFrom({ platform: process.platform, arch: process.arch, totalBytes: totalmem() });
+
 	const getSettings = (): AiSettings => {
 		const parsed = aiSettingsSchema.safeParse(readJson(settingsFile));
-		return parsed.success ? parsed.data : defaultAiSettings(opts.defaultOllamaModel);
+		// Sin elección guardada: el modelo recomendado para este equipo (FRAMEFLOW_MODEL lo fija en pruebas).
+		return parsed.success
+			? parsed.data
+			: defaultAiSettings(opts.defaultOllamaModel ?? defaultLocalModel(system()));
 	};
 
 	const readKeys = () => keysFileSchema.catch({}).parse(readJson(keysFile) ?? {});
@@ -78,12 +86,6 @@ export function createAiSettingsStore(opts: {
 			return null; // cifrada en otro equipo o con otro usuario: hay que volver a pegarla
 		}
 	};
-
-	const system = (): SystemInfo => ({
-		platform: process.platform,
-		arch: process.arch,
-		ramGb: Math.round(totalmem() / 1024 ** 3),
-	});
 
 	const ollama = (model: string) => new OllamaProvider(model, opts.localAi.url());
 	const LOCAL_MISSING = "La IA local no está preparada: en Ajustes puedes descargarla con un clic.";

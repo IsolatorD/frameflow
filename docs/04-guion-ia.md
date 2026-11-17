@@ -83,6 +83,7 @@ solo en el proceso principal).
   caracteres. En Linux sin llavero se avisa de que el cifrado es débil.
 - **Modelos:** el catálogo sugiere unos pocos por proveedor y admite cualquier ID ("Otro modelo"),
   porque los nombres cambian a menudo. "Probar conexión" valida clave y modelo sin gastar tokens.
+- **Modelo local por defecto = el recomendado** para el equipo (hasta que el usuario elija otro).
 - **Recomendación local** según el equipo: < 8 GB de RAM → la nube; 8–16 GB → 8B; ≥ 16 GB → 14B.
   Fuera de Mac con Apple Silicon se avisa de que sin GPU dedicada será lento.
 - **IA local en un clic** (`core/ai/localRuntime.ts` + `main/services/localAi/`): si el equipo no

@@ -1,5 +1,7 @@
 import { appendFileSync } from "node:fs";
+import { arch, platform, totalmem } from "node:os";
 import { describe, expect, it } from "vitest";
+import { defaultLocalModel, systemInfoFrom } from "../ai/catalog";
 import { generateScriptWithStats, OllamaProvider, type ScriptQualityOptions } from "./ai";
 import { qualityReport } from "./quality";
 
@@ -8,7 +10,10 @@ import { qualityReport } from "./quality";
 //   FRAMEFLOW_EVAL_OUT=/tmp/eval.jsonl FRAMEFLOW_EVAL_VARIANT='{"review":true}' \\
 //     pnpm --filter @frameflow/core exec vitest run ai.eval
 const out = process.env.FRAMEFLOW_EVAL_OUT;
-const model = process.env.FRAMEFLOW_MODEL ?? "hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M";
+// Por defecto, el modelo local recomendado para este equipo (como en la app).
+const model =
+	process.env.FRAMEFLOW_MODEL ??
+	defaultLocalModel(systemInfoFrom({ platform: platform(), arch: arch(), totalBytes: totalmem() }));
 const variant: ScriptQualityOptions = JSON.parse(process.env.FRAMEFLOW_EVAL_VARIANT ?? "{}");
 
 export const EVAL_TOPICS = [

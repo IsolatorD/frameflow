@@ -164,6 +164,26 @@ export function recommendLocalModel(system: SystemInfo): LocalRecommendation {
 	};
 }
 
+/**
+ * Modelo local por defecto (si el usuario aún no eligió): el recomendado para su equipo. Con poca
+ * RAM se recomienda la nube, pero si usa Ollama igualmente, el más ligero.
+ */
+export function defaultLocalModel(system: SystemInfo): string {
+	const recommendation = recommendLocalModel(system);
+	return recommendation.kind === "model" ? recommendation.model : QWEN3_8B;
+}
+
+/** Datos del equipo desde Node (proceso principal y pruebas). */
+export const systemInfoFrom = (os: {
+	platform: string;
+	arch: string;
+	totalBytes: number;
+}): SystemInfo => ({
+	platform: os.platform,
+	arch: os.arch,
+	ramGb: Math.round(os.totalBytes / 1024 ** 3),
+});
+
 /** Aviso si la clave pegada no tiene el formato habitual del proveedor (no bloquea). */
 export function keyWarning(provider: CloudProviderId, key: string): string | null {
 	const prefix = PROVIDERS[provider].keyPrefix;

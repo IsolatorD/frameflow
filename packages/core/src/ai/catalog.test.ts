@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	aiSettingsSchema,
 	defaultAiSettings,
+	defaultLocalModel,
 	keyHint,
 	keyWarning,
 	modelLabel,
@@ -27,6 +28,13 @@ describe("catálogo de IA", () => {
 		expect(windows).toMatchObject({ kind: "model", model: QWEN3_8B });
 		expect(windows.reason).toContain("tarjeta gráfica");
 		expect(recommendLocalModel({ platform: "linux", arch: "x64", ramGb: 4 }).kind).toBe("cloud");
+	});
+
+	it("el modelo local por defecto es el recomendado para el equipo", () => {
+		expect(defaultLocalModel({ platform: "darwin", arch: "arm64", ramGb: 16 })).toBe(QWEN3_14B);
+		expect(defaultLocalModel({ platform: "win32", arch: "x64", ramGb: 8 })).toBe(QWEN3_8B);
+		// Con poca RAM se recomienda la nube; si aun así usa Ollama, el más ligero.
+		expect(defaultLocalModel({ platform: "linux", arch: "x64", ramGb: 4 })).toBe(QWEN3_8B);
 	});
 
 	it("nombres, avisos de formato y pista de la clave", () => {

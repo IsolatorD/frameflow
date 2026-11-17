@@ -48,6 +48,6 @@ pnpm --filter @frameflow/db generate     # nueva migración tras cambiar package
   descarga su modelo (unos minutos); después se reutiliza.
 - **Modo automático (IA):** se elige en **Ajustes**: Ollama en este equipo (Qwen3 8B o 14B; si no
   tienes Ollama, la app lo descarga con un clic) o
-  Claude, OpenAI o Gemini con tu clave de API (ver `docs/04-guion-ia.md`). `FRAMEFLOW_MODEL` cambia el
-  modelo local por defecto. Sin IA lista, la app ofrece solo el modo paso a paso.
+  Claude, OpenAI o Gemini con tu clave de API (ver `docs/04-guion-ia.md`). Por defecto usa el modelo local recomendado para el
+  equipo (14B con 16 GB de RAM o más); `FRAMEFLOW_MODEL` lo fija (también en las pruebas con IA real). Sin IA lista, la app ofrece solo el modo paso a paso.
 - Los videos se guardan en `~/Frameflow/projects/<canal>/videos/<id>/` (voz y `renders/v<versión>.mp4`).

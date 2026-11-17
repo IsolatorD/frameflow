@@ -1,6 +1,7 @@
 import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { arch, platform, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
+import { defaultLocalModel, systemInfoFrom } from "@frameflow/core/ai/catalog";
 import type { LocalAiState } from "@frameflow/core/ai/localRuntime";
 import { describe, expect, it } from "vitest";
 import { createLocalAi } from "./localAi";
@@ -30,7 +31,10 @@ describe.skipIf(!process.env.FRAMEFLOW_LIVE_RUNTIME)("IA local real", () => {
 				},
 			});
 			localAi.prepare(
-				process.env.FRAMEFLOW_MODEL ?? "hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M",
+				process.env.FRAMEFLOW_MODEL ??
+					defaultLocalModel(
+						systemInfoFrom({ platform: platform(), arch: arch(), totalBytes: totalmem() }),
+					),
 				Number(process.env.FRAMEFLOW_LIVE_MODEL_GB ?? 5),
 			);
 		});

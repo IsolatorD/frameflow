@@ -594,17 +594,28 @@ try {
 		await page.getByText(/Listo: .* está descargado y preparado/).waitFor({ timeout: 900_000 });
 		await page.getByText("Usando el Ollama que descargó Frameflow").waitFor();
 	}
+	// El modelo por defecto es el recomendado para este equipo (14B con 16 GB, 8B con menos).
+	const modelSelect = page.getByLabel("Modelo", { exact: true });
+	const LOCAL_MODELS = {
+		"hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M": "Qwen3 8B",
+		"hf.co/unsloth/Qwen3-14B-GGUF:Q4_K_M": "Qwen3 14B",
+	};
+	const firstModel = await modelSelect.inputValue();
+	const firstLabel = LOCAL_MODELS[firstModel];
+	expect(firstLabel, `Modelo por defecto inesperado: ${firstModel}`);
+	const recommended = page.getByRole("button", { name: "Usar el recomendado" });
+	expect(!(await recommended.isVisible()), "El modelo por defecto debería ser el recomendado");
 	if (fakeOllama) {
 		// El modelo no está: se ofrece descargarlo; el botón es la confirmación.
-		await page.getByText("Qwen3 8B aún no está descargado").waitFor();
+		await page.getByText(`${firstLabel} aún no está descargado`).waitFor();
 		await page.screenshot({ path: join(shots, "16a-ajustes-descargar.png") });
-		await page.getByRole("button", { name: "Descargar Qwen3 8B" }).click();
-		await page.getByRole("progressbar", { name: "Descargar Qwen3 8B" }).waitFor();
+		await page.getByRole("button", { name: `Descargar ${firstLabel}` }).click();
+		await page.getByRole("progressbar", { name: `Descargar ${firstLabel}` }).waitFor();
 		// La primera descarga se corta: aviso de reintento y sigue sola.
 		await page.getByText(/Se cortó la conexión; reintentando/).waitFor({ timeout: 15_000 });
 		await page.screenshot({ path: join(shots, "16b-ajustes-descargando.png") });
 		await page
-			.getByText("Listo: Qwen3 8B está descargado y preparado.")
+			.getByText(`Listo: ${firstLabel} está descargado y preparado.`)
 			.waitFor({ timeout: 30_000 });
 		await page.getByText("Usando el Ollama instalado en tu equipo.").waitFor();
 	}
@@ -614,20 +625,22 @@ try {
 		.filter({ hasText: /Todo listo/ })
 		.waitFor();
 	await page.screenshot({ path: join(shots, "16-ajustes-local.png") });
-	// Con 16 GB o más se recomienda el 14B: el atajo lo elige (en equipos con menos, no aparece).
-	const recommended = page.getByRole("button", { name: "Usar el recomendado" });
-	if (await recommended.isVisible()) {
-		await recommended.click();
-		await recommended.waitFor({ state: "detached" });
-		await fileHas("ai-settings.json", "Qwen3-14B", true, "No se aplicó el recomendado");
-		if (fakeOllama) {
-			// Cancelar a medias conserva lo descargado y permite continuar.
-			await page.getByRole("button", { name: "Descargar Qwen3 14B" }).click();
-			await page.getByRole("progressbar", { name: "Descargar Qwen3 14B" }).waitFor();
-			await page.getByRole("button", { name: "Cancelar" }).click();
-			await page.getByText("Descarga cancelada. Lo descargado se conserva.").waitFor();
-			await page.getByRole("button", { name: "Cerrar" }).click();
-			await page.getByRole("button", { name: "Descargar Qwen3 14B" }).waitFor();
+	if (fakeOllama) {
+		// Otro modelo: cancelar a medias conserva lo descargado y permite continuar.
+		const [otherModel, otherLabel] = Object.entries(LOCAL_MODELS).find(([id]) => id !== firstModel);
+		await modelSelect.selectOption(otherModel);
+		await fileHas("ai-settings.json", otherModel, true, "No se guardó el modelo elegido");
+		await page.getByRole("button", { name: `Descargar ${otherLabel}` }).click();
+		await page.getByRole("progressbar", { name: `Descargar ${otherLabel}` }).waitFor();
+		await page.getByRole("button", { name: "Cancelar" }).click();
+		await page.getByText("Descarga cancelada. Lo descargado se conserva.").waitFor();
+		await page.getByRole("button", { name: "Cerrar" }).click();
+		await page.getByRole("button", { name: `Descargar ${otherLabel}` }).waitFor();
+		// El atajo vuelve al recomendado (ya descargado).
+		if (await recommended.isVisible()) {
+			await recommended.click();
+			await page.getByText("Usando el Ollama instalado en tu equipo.").waitFor();
+			await fileHas("ai-settings.json", firstModel, true, "No se aplicó el recomendado");
 		}
 	}
 
@@ -694,6 +707,7 @@ try {
 async function startFakeOllama() {
 	const installed = new Set();
 	let cutOnce = true;
+	let pulls = 0;
 	const server = createServer(async (req, res) => {
 		if (req.url === "/api/version") return json(res, { version: "0.0.0-smoke" });
 		if (req.url === "/api/tags")
@@ -702,7 +716,8 @@ async function startFakeOllama() {
 			let body = "";
 			for await (const chunk of req) body += chunk;
 			const { model } = JSON.parse(body);
-			const slow = model.includes("14B");
+			pulls++;
+			const slow = pulls > 1; // la primera rápida (con un corte), las siguientes lentas
 			res.writeHead(200, { "content-type": "application/x-ndjson" });
 			const line = (data) => res.write(`${JSON.stringify(data)}\n`);
 			line({ status: "pulling manifest" });
