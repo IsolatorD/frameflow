@@ -1,3 +1,4 @@
+import { Logo } from "../../atoms/Logo/Logo";
 import type { AppShellProps } from "./AppShellInterface";
 
 export function AppShell({ nav, title, subtitle, eyebrow, actions, children }: AppShellProps) {
@@ -6,9 +7,7 @@ export function AppShell({ nav, title, subtitle, eyebrow, actions, children }: A
 			<aside className="relative flex w-56 shrink-0 flex-col overflow-y-auto border-r border-white/5 bg-zinc-900/50 px-3 pb-4 pt-12">
 				{/* pt-12 deja sitio a los botones de ventana de macOS (titleBarStyle hiddenInset) */}
 				<div className="mb-6 flex items-center gap-2 px-2">
-					<span className="flex size-7 items-center justify-center rounded-lg bg-violet-500 text-sm font-bold">
-						F
-					</span>
+					<Logo size={28} />
 					<span className="font-semibold tracking-tight">Frameflow</span>
 				</div>
 				<nav aria-label="Principal" className="flex flex-col gap-5">

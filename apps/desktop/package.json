@@ -9,7 +9,8 @@
 		"build": "electron-vite build",
 		"preview": "electron-vite preview",
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-		"smoke": "electron-vite build && node scripts/smoke.mjs"
+		"smoke": "electron-vite build && node scripts/smoke.mjs",
+		"icons": "node scripts/build-icons.mjs"
 	},
 	"dependencies": {
 		"@frameflow/core": "workspace:*",

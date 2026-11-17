@@ -19,6 +19,8 @@ const repoRoot = join(app.getAppPath(), "../..");
 const migrationsFolder = join(repoRoot, "packages/db/drizzle");
 const ttsDir = join(repoRoot, "packages/tts");
 const rendererEntry = join(repoRoot, "packages/renderer-remotion/src/index.ts");
+// Icono de la app (lo genera `pnpm icons` desde brand/). Empaquetada, lo pone build/icon.icns.
+const appIcon = join(app.getAppPath(), "resources/icon.png");
 // Modelo local para el modo automático (configurable).
 const llmModel = process.env.FRAMEFLOW_MODEL ?? "hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M";
 
@@ -30,6 +32,7 @@ function createWindow(): void {
 		minHeight: 640,
 		show: false,
 		backgroundColor: "#0f0f12",
+		icon: appIcon, // Windows/Linux; en macOS manda el icono del Dock
 		titleBarStyle: "hiddenInset",
 		webPreferences: {
 			preload: join(import.meta.dirname, "../preload/index.mjs"),
@@ -56,6 +59,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
+	// En desarrollo macOS mostraría el icono de Electron: se pone el de Frameflow.
+	if (process.platform === "darwin" && !app.isPackaged) app.dock?.setIcon(appIcon);
 	mkdirSync(dataDir, { recursive: true });
 	const db = await openDatabase(`file:${join(dataDir, "frameflow.db")}`, migrationsFolder);
 	const projects = createProjectsRepository(db);
