@@ -14,6 +14,7 @@ import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { NewOverlay, OverlayOp } from "@frameflow/core/script/overlays";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
+import type { UpdateState } from "./updates";
 
 /** Resultado de una llamada IPC: errores como dato, no como excepción (mensajes limpios). */
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -22,6 +23,15 @@ export type FrameflowApi = {
 	app: {
 		/** URL base del servidor local de medios (voces, renders…) para la vista previa. */
 		mediaBaseUrl(): Promise<IpcResult<string>>;
+	};
+	updates: {
+		state(): Promise<IpcResult<UpdateState>>;
+		check(): Promise<IpcResult<UpdateState>>;
+		/** Descarga la versión nueva (en macOS sin firma, abre la página de descarga). */
+		download(): Promise<IpcResult<UpdateState>>;
+		/** Reinicia e instala la versión descargada. */
+		install(): Promise<IpcResult<UpdateState>>;
+		onEvent(listener: (state: UpdateState) => void): () => void;
 	};
 	presets: {
 		list(): Promise<IpcResult<NichePreset[]>>;
@@ -78,6 +88,11 @@ export type FrameflowApi = {
 
 export const IPC = {
 	appMediaBaseUrl: "app:media-base-url",
+	updatesState: "updates:state",
+	updatesCheck: "updates:check",
+	updatesDownload: "updates:download",
+	updatesInstall: "updates:install",
+	updatesEvent: "updates:event",
 	presetsList: "presets:list",
 	projectsList: "projects:list",
 	projectsGet: "projects:get",

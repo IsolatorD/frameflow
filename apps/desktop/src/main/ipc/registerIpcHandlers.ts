@@ -12,6 +12,7 @@ import { z } from "zod";
 import { IPC, type IpcResult } from "../../shared/api";
 import type { AiSettingsStore } from "../services/aiSettings";
 import type { LocalAi } from "../services/localAi/localAi";
+import type { Updates } from "../services/updates";
 import {
 	IMAGE_EXTENSIONS,
 	MUSIC_EXTENSIONS,
@@ -43,11 +44,16 @@ export function registerIpcHandlers(deps: {
 	pipeline: VideoPipeline;
 	ai: AiSettingsStore;
 	localAi: LocalAi;
+	updates: Updates;
 	mediaBaseUrl: string;
 }): void {
-	const { projects, videos, pipeline, ai, localAi } = deps;
+	const { projects, videos, pipeline, ai, localAi, updates } = deps;
 
 	ipcMain.handle(IPC.appMediaBaseUrl, () => wrap(() => deps.mediaBaseUrl));
+	ipcMain.handle(IPC.updatesState, () => wrap(() => updates.state()));
+	ipcMain.handle(IPC.updatesCheck, () => wrap(() => updates.check()));
+	ipcMain.handle(IPC.updatesDownload, () => wrap(() => updates.download()));
+	ipcMain.handle(IPC.updatesInstall, () => wrap(() => updates.install()));
 	ipcMain.handle(IPC.presetsList, () => wrap(() => [...BUILT_IN_PRESETS]));
 	ipcMain.handle(IPC.projectsList, () => wrap(() => projects.list()));
 	ipcMain.handle(IPC.projectsGet, (_e, id: unknown) => wrap(() => projects.get(uuid(id))));

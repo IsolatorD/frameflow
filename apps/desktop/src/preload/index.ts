@@ -2,11 +2,23 @@ import type { LocalAiState } from "@frameflow/core/ai/localRuntime";
 import type { JobEvent } from "@frameflow/core/video";
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
 import { type FrameflowApi, IPC } from "../shared/api";
+import type { UpdateState } from "../shared/updates";
 
 // Única superficie que ve la interfaz. Sin acceso a Node ni a ipcRenderer directo.
 const api: FrameflowApi = {
 	app: {
 		mediaBaseUrl: () => ipcRenderer.invoke(IPC.appMediaBaseUrl),
+	},
+	updates: {
+		state: () => ipcRenderer.invoke(IPC.updatesState),
+		check: () => ipcRenderer.invoke(IPC.updatesCheck),
+		download: () => ipcRenderer.invoke(IPC.updatesDownload),
+		install: () => ipcRenderer.invoke(IPC.updatesInstall),
+		onEvent: (listener) => {
+			const handler = (_event: IpcRendererEvent, payload: UpdateState) => listener(payload);
+			ipcRenderer.on(IPC.updatesEvent, handler);
+			return () => ipcRenderer.removeListener(IPC.updatesEvent, handler);
+		},
 	},
 	presets: {
 		list: () => ipcRenderer.invoke(IPC.presetsList),

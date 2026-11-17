@@ -34,7 +34,7 @@ import {
 } from "@frameflow/core/video";
 import type { ProjectsRepository } from "@frameflow/db/projects";
 import type { VideosRepository } from "@frameflow/db/videos";
-import { renderStoryboard } from "./render";
+import { type RemotionSource, renderStoryboard } from "./render";
 import type { VoiceEngine } from "./voice/kokoro";
 
 type Deps = {
@@ -46,7 +46,8 @@ type Deps = {
 	dataDir: string;
 	/** Voz (Kokoro en Node). */
 	voice: VoiceEngine;
-	rendererEntry: string;
+	/** Composición de Remotion: código (desarrollo) o ya empaquetada (app instalada). */
+	remotion: RemotionSource;
 	/** URL del servidor de medios que sirve <dataDir>. */
 	mediaBaseUrl: string;
 	emit: (event: JobEvent) => void;
@@ -248,7 +249,7 @@ export function createVideoPipeline(deps: Deps) {
 		const outputPath = join(dir, `v${render.versionNumber}.mp4`);
 		try {
 			const out = await renderStoryboard({
-				entryPoint: deps.rendererEntry,
+				source: deps.remotion,
 				storyboard: video.storyboard,
 				mediaBaseUrl: `${deps.mediaBaseUrl}/projects/${project.slug}`,
 				outputPath,
@@ -273,6 +274,9 @@ export function createVideoPipeline(deps: Deps) {
 		aiStatus: async (): Promise<LlmStatus> => (await deps.llm()).status(),
 
 		isBusy: (videoId: string) => running.has(videoId),
+
+		/** ¿Hay algún video generándose? (no se reinicia para actualizar mientras tanto) */
+		anyBusy: () => running.size > 0,
 
 		async create(input: CreateVideoInput): Promise<VideoDetail> {
 			const data = createVideoInputSchema.parse(input);

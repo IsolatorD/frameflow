@@ -6,6 +6,7 @@ import { StatCard } from "@frameflow/ui/src/molecules/StatCard/StatCard";
 import { BrandSummary } from "@frameflow/ui/src/organisms/BrandSummary/BrandSummary";
 import { AppShell } from "@frameflow/ui/src/templates/AppShell/AppShell";
 import { useNavigate, useParams } from "react-router";
+import { UpdateBanner } from "../../components/UpdateBanner/UpdateBanner";
 import { usePresets } from "../../hooks/usePresets/usePresets";
 import { useProject } from "../../hooks/useProject/useProject";
 import { useProjects } from "../../hooks/useProjects/useProjects";
@@ -40,7 +41,12 @@ export function ProjectPage() {
 				? `No se pudo cargar el proyecto: ${project.error.message}`
 				: "Este proyecto no existe.";
 		return (
-			<AppShell footer={footerNav(navigate)} nav={[projectsGroup]} title="Proyecto">
+			<AppShell
+				footer={footerNav(navigate)}
+				notice={<UpdateBanner />}
+				nav={[projectsGroup]}
+				title="Proyecto"
+			>
 				<p role={project.isPending ? undefined : "alert"} className="text-sm text-zinc-400">
 					{message}
 				</p>
@@ -54,6 +60,7 @@ export function ProjectPage() {
 	return (
 		<AppShell
 			footer={footerNav(navigate)}
+			notice={<UpdateBanner />}
 			nav={[
 				projectsGroup,
 				{

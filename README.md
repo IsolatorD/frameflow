@@ -3,7 +3,7 @@
 Estudio de escritorio para crear y gestionar canales de videos animados cortos: cada **proyecto es un
 canal** con su marca, sus videos, sus cuentas sociales y sus estadísticas.
 
-Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md)
+Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md)
 
 ## Estructura
 
@@ -39,6 +39,7 @@ SMOKE_RUNTIME=1 pnpm --filter @frameflow/desktop smoke  # ignora tu Ollama y des
 FRAMEFLOW_LIVE_RUNTIME=1 pnpm exec vitest run apps/desktop/src/main/services/localAi   # lo mismo, sin interfaz
 FRAMEFLOW_LIVE_AI=1 pnpm --filter @frameflow/core exec vitest run ai.live   # guion con el modelo real
 pnpm --filter @frameflow/db generate     # nueva migración tras cambiar packages/db/src/schema.ts
+pnpm --filter @frameflow/desktop dist   # instalador para este sistema (apps/desktop/dist/); publicar: docs/06-distribucion.md
 ```
 
 ### Requisitos para generar videos

@@ -1,0 +1,64 @@
+# Instaladores de Frameflow. Local: `pnpm --filter @frameflow/desktop dist`.
+# En CI (GitHub Actions) se publican como release en GitHub, de donde se actualiza la app.
+appId: dev.frameflow.app
+productName: Frameflow
+copyright: Copyright © 2026 Daniel Rodriguez · GPL-3.0-or-later
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - resources/**
+  - package.json
+extraResources:
+  # Migraciones de la base de datos y la composición de Remotion ya empaquetada.
+  - from: ../../packages/db/drizzle
+    to: drizzle
+  - from: build/remotion-bundle
+    to: remotion-bundle
+  - from: ../../LICENSE
+    to: LICENSE.txt
+asar: true
+asarUnpack:
+  # Lo que se ejecuta como proceso aparte o es binario nativo no puede ir dentro del .asar.
+  - out/main/espeak-process.js
+  - node_modules/@echogarden/espeak-ng-emscripten/**
+  - node_modules/onnxruntime-node/**
+  - node_modules/@libsql/**
+  - node_modules/@remotion/compositor-*/**
+publish:
+  provider: github
+  owner: IsolatorD
+  repo: frameflow
+  # La CI crea la release como borrador y la publica al final (ver .github/workflows/release.yml).
+  releaseType: draft
+mac:
+  category: public.app-category.video
+  icon: build/icon.icns
+  target:
+    - target: dmg
+    - target: zip # lo usa electron-updater (cuando la app esté firmada)
+  # Sin cuenta de desarrollador de Apple todavía: firma ad-hoc ("-"), sin notarización. Sin firmar,
+  # macOS daría la app descargada por "dañada"; así sale el aviso de "desarrollador no verificado".
+  identity: "-"
+  # El "hardened runtime" solo hace falta para notarizar; con firma ad-hoc impediría cargar las
+  # librerías nativas (ONNX Runtime, libsql).
+  hardenedRuntime: false
+dmg:
+  artifactName: Frameflow-${version}-mac-${arch}.${ext}
+win:
+  icon: resources/icon.png
+  target:
+    - target: nsis
+nsis:
+  artifactName: Frameflow-${version}-windows-${arch}-setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+linux:
+  icon: resources/icon.png
+  category: AudioVideo
+  target:
+    - target: AppImage
+appImage:
+  artifactName: Frameflow-${version}-linux-${arch}.${ext}

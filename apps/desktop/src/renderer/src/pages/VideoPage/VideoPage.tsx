@@ -25,6 +25,7 @@ import { AppShell } from "@frameflow/ui/src/templates/AppShell/AppShell";
 import type { PlayerRef } from "@remotion/player";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router";
+import { UpdateBanner } from "../../components/UpdateBanner/UpdateBanner";
 import { useJobEvents } from "../../hooks/useJobEvents/useJobEvents";
 import { useMediaBaseUrl } from "../../hooks/useMediaBaseUrl/useMediaBaseUrl";
 import { usePlayheadSeconds } from "../../hooks/usePlayheadSeconds/usePlayheadSeconds";
@@ -227,7 +228,7 @@ export function VideoPage() {
 				? `No se pudo cargar el video: ${video.error.message}`
 				: "Este video no existe.";
 		return (
-			<AppShell footer={footerNav(navigate)} nav={nav} title="Video">
+			<AppShell footer={footerNav(navigate)} notice={<UpdateBanner />} nav={nav} title="Video">
 				<p role={video.isPending ? undefined : "alert"} className="text-sm text-zinc-400">
 					{message}
 				</p>
@@ -249,6 +250,7 @@ export function VideoPage() {
 	return (
 		<AppShell
 			footer={footerNav(navigate)}
+			notice={<UpdateBanner />}
 			nav={nav}
 			eyebrow={project.data?.name}
 			title={data.title}

@@ -6,7 +6,13 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 export default defineConfig({
 	main: {
 		// Los paquetes del monorepo (@frameflow/*) se empaquetan; el resto queda en node_modules.
-		plugins: [externalizeDepsPlugin({ exclude: ["@frameflow/core", "@frameflow/db"] })],
+		plugins: [
+			externalizeDepsPlugin({
+				exclude: ["@frameflow/core", "@frameflow/db"],
+				// Solo en desarrollo (webpack de Remotion); la app instalada usa el paquete ya hecho.
+				include: ["@remotion/bundler"],
+			}),
+		],
 		build: {
 			rollupOptions: {
 				input: {

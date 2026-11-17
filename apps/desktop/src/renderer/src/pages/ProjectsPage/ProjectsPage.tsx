@@ -6,6 +6,7 @@ import { ProjectGrid } from "@frameflow/ui/src/organisms/ProjectGrid/ProjectGrid
 import { AppShell } from "@frameflow/ui/src/templates/AppShell/AppShell";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { UpdateBanner } from "../../components/UpdateBanner/UpdateBanner";
 import { useCreateProject } from "../../hooks/useCreateProject/useCreateProject";
 import { usePresets } from "../../hooks/usePresets/usePresets";
 import { useProjects } from "../../hooks/useProjects/useProjects";
@@ -32,6 +33,7 @@ export function ProjectsPage() {
 	return (
 		<AppShell
 			footer={footerNav(navigate)}
+			notice={<UpdateBanner />}
 			nav={[projectsNavGroup(projects.data ?? [], navigate)]}
 			title="Proyectos"
 			subtitle="Cada proyecto es un canal con su marca, contenido y cuentas."

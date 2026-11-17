@@ -89,10 +89,20 @@ const testImage = join(home, "test-image.png");
 // SMOKE_RUNTIME=1: ignora el Ollama del sistema y descarga el de verdad desde la app (red real).
 const realRuntime = Boolean(process.env.SMOKE_RUNTIME);
 const fakeOllama = process.env.SMOKE_AI || realRuntime ? null : await startFakeOllama();
+// Servidor de actualizaciones simulado: anuncia la versión 99.0.0 (no se descarga nada).
+const fakeUpdates = await startFakeUpdates();
 
+// SMOKE_PACKAGED=1: abre la app ya empaquetada (pnpm dist) en vez de la de desarrollo.
+const packagedApp = {
+	darwin: `dist/mac-${process.arch}/Frameflow.app/Contents/MacOS/Frameflow`,
+	win32: "dist/win-unpacked/Frameflow.exe",
+	linux: "dist/linux-unpacked/frameflow",
+}[process.platform];
 const app = await electron.launch({
-	args: [appDir],
-	cwd: appDir,
+	...(process.env.SMOKE_PACKAGED
+		? { executablePath: join(appDir, packagedApp), args: [] }
+		: { args: [appDir] }),
+	cwd: process.env.SMOKE_PACKAGED ? "/" : appDir,
 	env: {
 		...process.env,
 		FRAMEFLOW_HOME: home,
@@ -100,6 +110,7 @@ const app = await electron.launch({
 		FRAMEFLOW_TEST_MEDIA: testImage,
 		...(fakeOllama ? { OLLAMA_URL: fakeOllama.url } : {}),
 		...(realRuntime ? { FRAMEFLOW_IGNORE_SYSTEM_OLLAMA: "1" } : {}),
+		FRAMEFLOW_UPDATE_URL: fakeUpdates.url,
 	},
 });
 const errors = [];
@@ -584,6 +595,12 @@ try {
 		"Ollama debería ser el proveedor por defecto",
 	);
 	await page.getByText(/Para tu equipo:/).waitFor();
+	// Actualizaciones: aviso en la barra lateral y novedades en "Acerca de".
+	await page.getByRole("region", { name: "Actualización disponible" }).first().waitFor();
+	await page.getByText("Frameflow 99.0.0 disponible").first().waitFor();
+	await page.getByText("Novedades de prueba: todo más rápido.").waitFor();
+	await page.getByText(/^Versión 0\./).waitFor();
+	await page.screenshot({ path: join(shots, "18-actualizacion.png"), fullPage: true });
 	if (realRuntime) {
 		// Sin Ollama: un clic descarga Ollama (verificado) y prepara el modelo.
 		await page.getByText("Preparar la IA en este equipo").waitFor();
@@ -705,9 +722,16 @@ try {
 
 	if (errors.length) throw new Error(`Errores en la consola:\n${errors.join("\n")}`);
 	console.log(`OK: proyecto creado y panel navegable. Capturas en ${shots}`);
+} catch (error) {
+	// Captura del momento del fallo (y errores de consola) para ver qué pasó.
+	const page = await app.firstWindow().catch(() => null);
+	await page?.screenshot({ path: join(shots, "fallo.png") }).catch(() => undefined);
+	if (errors.length) console.error(`Errores en la consola:\n${errors.join("\n")}`);
+	throw error;
 } finally {
 	await app.close();
 	fakeOllama?.close();
+	fakeUpdates.close();
 	// SMOKE_KEEP=1 conserva la carpeta de datos (BD, voces, MP4) para inspeccionarla.
 	if (process.env.SMOKE_KEEP) console.log(`Datos conservados en ${home}`);
 	else rmSync(home, { recursive: true, force: true });
@@ -754,4 +778,30 @@ async function startFakeOllama() {
 function json(res, data) {
 	res.writeHead(200, { "content-type": "application/json" });
 	res.end(JSON.stringify(data));
+}
+
+async function startFakeUpdates() {
+	const feed = { darwin: "latest-mac.yml", win32: "latest.yml", linux: "latest-linux.yml" }[
+		process.platform
+	];
+	const file = "Frameflow-99.0.0.zip";
+	const yml = `version: 99.0.0
+files:
+  - url: ${file}
+    sha512: ${"A".repeat(86)}==
+    size: 1
+path: ${file}
+sha512: ${"A".repeat(86)}==
+releaseDate: '2026-11-17T00:00:00.000Z'
+releaseNotes: 'Novedades de prueba: todo más rápido.'
+`;
+	const server = createServer((req, res) => {
+		if (req.url?.startsWith(`/${feed}`)) {
+			res.writeHead(200, { "content-type": "text/yaml" });
+			return res.end(yml);
+		}
+		res.writeHead(404).end();
+	});
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	return { url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() };
 }

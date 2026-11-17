@@ -4,6 +4,7 @@ import type { AppShellNavItem, AppShellProps } from "./AppShellInterface";
 export function AppShell({
 	nav,
 	footer,
+	notice,
 	title,
 	subtitle,
 	eyebrow,
@@ -30,8 +31,12 @@ export function AppShell({
 						</div>
 					))}
 				</nav>
+				{notice ? <div className="mt-auto pt-5">{notice}</div> : null}
 				{footer?.length ? (
-					<nav aria-label="Aplicación" className="mt-auto flex flex-col gap-0.5 pt-5">
+					<nav
+						aria-label="Aplicación"
+						className={`flex flex-col gap-0.5 pt-5 ${notice ? "pt-3" : "mt-auto"}`}
+					>
 						{footer.map((item) => (
 							<NavButton key={item.id} item={item} />
 						))}

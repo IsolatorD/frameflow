@@ -8,3 +8,4 @@ prototype/tts/.venv
 __pycache__
 test-results
 .venv
+apps/desktop/build/remotion-bundle
