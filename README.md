@@ -44,6 +44,7 @@ pnpm --filter @frameflow/db generate     # nueva migración tras cambiar package
 
 - **Voz:** `brew install uv espeak-ng`. La primera vez, uv instala el entorno de `packages/tts` y Kokoro
   descarga su modelo (unos minutos); después se reutiliza.
-- **Modo automático (IA):** Ollama en marcha con el modelo de `FRAMEFLOW_MODEL`
-  (por defecto `hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M`). Sin él, la app ofrece solo el modo paso a paso.
+- **Modo automático (IA):** se elige en **Ajustes**: Ollama en este equipo (Qwen3 8B o 14B) o
+  Claude, OpenAI o Gemini con tu clave de API (ver `docs/04-guion-ia.md`). `FRAMEFLOW_MODEL` cambia el
+  modelo local por defecto. Sin IA lista, la app ofrece solo el modo paso a paso.
 - Los videos se guardan en `~/Frameflow/projects/<canal>/videos/<id>/` (voz y `renders/v<versión>.mp4`).

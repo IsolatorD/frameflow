@@ -14,6 +14,7 @@ export function NewVideoForm({
 	languages,
 	secondsRange,
 	ai,
+	onOpenAiSettings,
 	onSubmit,
 	submitting = false,
 	serverError,
@@ -92,6 +93,15 @@ export function NewVideoForm({
 						onSelect={() => set("mode", "stepwise")}
 					/>
 				</div>
+				{ai && onOpenAiSettings ? (
+					<button
+						type="button"
+						onClick={onOpenAiSettings}
+						className="self-start text-xs text-violet-300 underline-offset-2 hover:underline"
+					>
+						{ai.available ? "Cambiar la IA" : "Configurar la IA"}
+					</button>
+				) : null}
 			</fieldset>
 			{serverError ? (
 				<p role="alert" className="text-sm text-red-400">

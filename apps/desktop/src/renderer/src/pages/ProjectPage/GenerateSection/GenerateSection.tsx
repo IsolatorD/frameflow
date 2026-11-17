@@ -4,7 +4,7 @@ import { NewVideoForm } from "@frameflow/ui/src/organisms/NewVideoForm/NewVideoF
 import { useNavigate } from "react-router";
 import { useAiStatus } from "../../../hooks/useAiStatus/useAiStatus";
 import { useCreateVideo } from "../../../hooks/useVideoActions/useVideoActions";
-import { videoPath } from "../../../utils/router/router";
+import { SETTINGS_PATH, videoPath } from "../../../utils/router/router";
 
 const LANGUAGE_NAMES: Record<(typeof SUPPORTED_LANGUAGES)[number], string> = {
 	es: "Español",
@@ -30,6 +30,7 @@ export function GenerateSection({ project }: { project: ProjectWithBrand }) {
 						? { available: false, name: "IA", reason: ai.error.message }
 						: null
 			}
+			onOpenAiSettings={() => navigate(SETTINGS_PATH)}
 			submitting={create.isPending}
 			serverError={create.error?.message}
 			onSubmit={(values) =>

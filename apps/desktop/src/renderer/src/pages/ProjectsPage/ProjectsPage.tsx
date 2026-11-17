@@ -9,7 +9,7 @@ import { useNavigate } from "react-router";
 import { useCreateProject } from "../../hooks/useCreateProject/useCreateProject";
 import { usePresets } from "../../hooks/usePresets/usePresets";
 import { useProjects } from "../../hooks/useProjects/useProjects";
-import { projectsNavGroup } from "../../utils/navigation/navigation";
+import { footerNav, projectsNavGroup } from "../../utils/navigation/navigation";
 import { projectPath } from "../../utils/router/router";
 import { toGridItem, toPresetOption } from "./ProjectsPage.constants";
 
@@ -31,6 +31,7 @@ export function ProjectsPage() {
 
 	return (
 		<AppShell
+			footer={footerNav(navigate)}
 			nav={[projectsNavGroup(projects.data ?? [], navigate)]}
 			title="Proyectos"
 			subtitle="Cada proyecto es un canal con su marca, contenido y cuentas."

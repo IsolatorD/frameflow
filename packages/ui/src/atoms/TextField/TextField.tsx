@@ -27,6 +27,7 @@ export function TextField({
 		disabled,
 		"aria-invalid": Boolean(error),
 		"aria-describedby": describedBy,
+		...(type === "password" ? { autoComplete: "off", spellCheck: false } : {}),
 	};
 
 	return (

@@ -9,6 +9,7 @@ import type { VideosRepository } from "@frameflow/db/videos";
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { z } from "zod";
 import { IPC, type IpcResult } from "../../shared/api";
+import type { AiSettingsStore } from "../services/aiSettings";
 import {
 	IMAGE_EXTENSIONS,
 	MUSIC_EXTENSIONS,
@@ -38,9 +39,10 @@ export function registerIpcHandlers(deps: {
 	projects: ProjectsRepository;
 	videos: VideosRepository;
 	pipeline: VideoPipeline;
+	ai: AiSettingsStore;
 	mediaBaseUrl: string;
 }): void {
-	const { projects, videos, pipeline } = deps;
+	const { projects, videos, pipeline, ai } = deps;
 
 	ipcMain.handle(IPC.appMediaBaseUrl, () => wrap(() => deps.mediaBaseUrl));
 	ipcMain.handle(IPC.presetsList, () => wrap(() => [...BUILT_IN_PRESETS]));
@@ -55,6 +57,16 @@ export function registerIpcHandlers(deps: {
 	);
 
 	ipcMain.handle(IPC.aiStatus, () => wrap(() => pipeline.aiStatus()));
+	ipcMain.handle(IPC.aiSettings, () => wrap(() => ai.view()));
+	ipcMain.handle(IPC.aiSaveSettings, (_e, settings: unknown) =>
+		wrap(() => ai.saveSettings(settings)),
+	);
+	ipcMain.handle(IPC.aiSetKey, (_e, provider: unknown, key: unknown) =>
+		wrap(() => ai.setKey(provider, key)),
+	);
+	ipcMain.handle(IPC.aiTest, (_e, provider: unknown, model: unknown) =>
+		wrap(() => ai.test(provider, model)),
+	);
 	ipcMain.handle(IPC.videosList, (_e, projectId: unknown) =>
 		wrap(() => videos.list(uuid(projectId))),
 	);

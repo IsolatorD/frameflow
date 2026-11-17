@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { modelLabel } from "../ai/catalog";
 import { isCopiedLine, REPEAT_THRESHOLD, similarity } from "./quality";
 import { type Script, sceneRange, scriptSchema, WORDS_PER_SECOND } from "./script";
 
-// Generación del guion con un LLM. El proveedor es intercambiable (Ollama hoy; Claude/OpenAI mañana).
+// Generación del guion con un LLM. El proveedor es intercambiable: Ollama aquí; Claude, OpenAI y
+// Gemini en src/ai/providers.
 
 export type LlmMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -402,30 +404,36 @@ export class OllamaProvider implements LlmProvider {
 		private readonly model: string,
 		private readonly baseUrl = "http://localhost:11434",
 	) {
-		this.name = `Ollama · ${model}`;
+		this.name = `${modelLabel("ollama", model)} (en este equipo)`;
 	}
 
-	async status(): Promise<LlmStatus> {
+	/** Modelos instalados, o null si Ollama no está en marcha. */
+	async installedModels(): Promise<string[] | null> {
 		try {
 			const res = await fetch(`${this.baseUrl}/api/tags`, { signal: AbortSignal.timeout(2000) });
 			const data = (await res.json()) as { models?: { name: string }[] };
-			const installed = (data.models ?? []).some(
-				(m) => m.name === this.model || m.name === `${this.model}:latest`,
-			);
-			return installed
-				? { available: true, name: this.name }
-				: {
-						available: false,
-						name: this.name,
-						reason: `El modelo ${this.model} no está instalado en Ollama.`,
-					};
+			return (data.models ?? []).map((m) => m.name);
 		} catch {
+			return null;
+		}
+	}
+
+	async status(): Promise<LlmStatus> {
+		const models = await this.installedModels();
+		if (models === null)
 			return {
 				available: false,
 				name: this.name,
 				reason: "Ollama no está en marcha en este equipo.",
 			};
-		}
+		const installed = models.some((m) => m === this.model || m === `${this.model}:latest`);
+		return installed
+			? { available: true, name: this.name }
+			: {
+					available: false,
+					name: this.name,
+					reason: `El modelo ${modelLabel("ollama", this.model)} no está instalado en Ollama.`,
+				};
 	}
 
 	async generateJson(

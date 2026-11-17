@@ -33,7 +33,7 @@ import { useProjects } from "../../hooks/useProjects/useProjects";
 import { useVersionHistory } from "../../hooks/useVersionHistory/useVersionHistory";
 import { useVideo } from "../../hooks/useVideo/useVideo";
 import { useVideoActions } from "../../hooks/useVideoActions/useVideoActions";
-import { projectsNavGroup } from "../../utils/navigation/navigation";
+import { footerNav, projectsNavGroup } from "../../utils/navigation/navigation";
 import { projectPath } from "../../utils/router/router";
 import { formatDuration, VIDEO_STATUS } from "../../utils/videoStatus/videoStatus";
 import { SECTIONS } from "../ProjectPage/ProjectPage.constants";
@@ -227,7 +227,7 @@ export function VideoPage() {
 				? `No se pudo cargar el video: ${video.error.message}`
 				: "Este video no existe.";
 		return (
-			<AppShell nav={nav} title="Video">
+			<AppShell footer={footerNav(navigate)} nav={nav} title="Video">
 				<p role={video.isPending ? undefined : "alert"} className="text-sm text-zinc-400">
 					{message}
 				</p>
@@ -248,6 +248,7 @@ export function VideoPage() {
 
 	return (
 		<AppShell
+			footer={footerNav(navigate)}
 			nav={nav}
 			eyebrow={project.data?.name}
 			title={data.title}

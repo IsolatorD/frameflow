@@ -1,7 +1,7 @@
 // Prueba de humo de la app compilada: abre Electron con una carpeta de datos temporal,
 // crea un proyecto desde la interfaz y guarda capturas en test-results/.
 // Uso: pnpm smoke   (compila y ejecuta)
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
@@ -551,6 +551,87 @@ try {
 	await page.getByRole("button", { name: /Por qué el cielo es azul/ }).waitFor();
 	if (process.env.SMOKE_AI) await page.getByRole("button", { name: /Marte/ }).waitFor();
 	await page.screenshot({ path: join(shots, "13-biblioteca.png") });
+
+	// Ajustes de IA: elegir proveedor, guardar una clave (cifrada), cambiar de modelo y volver.
+	// No llama a ningún servicio en la nube: la clave es de prueba y no se pulsa "Probar" en ellos.
+	const aiFile = (name) => {
+		const file = join(home, name);
+		return existsSync(file) ? readFileSync(file, "utf8") : "";
+	};
+	// La pantalla cambia al instante (optimista) y el archivo se escribe justo después: se espera.
+	const fileHas = async (name, text, present, message) => {
+		for (let i = 0; i < 30 && aiFile(name).includes(text) !== present; i++)
+			await page.waitForTimeout(100);
+		expect(aiFile(name).includes(text) === present, message);
+	};
+	await page
+		.getByRole("navigation", { name: "Aplicación" })
+		.getByRole("button", { name: "Ajustes" })
+		.click();
+	await page.getByRole("heading", { level: 1, name: "Ajustes" }).waitFor();
+	expect(
+		await page.getByRole("radio", { name: /En este equipo/ }).isChecked(),
+		"Ollama debería ser el proveedor por defecto",
+	);
+	await page.getByText(/Para tu equipo:/).waitFor();
+	await page.getByRole("button", { name: "Probar conexión" }).click();
+	await page
+		.getByRole("status")
+		.filter({ hasText: /Todo listo|Ollama|instalado/ })
+		.waitFor();
+	await page.screenshot({ path: join(shots, "16-ajustes-local.png") });
+	// Con 16 GB o más se recomienda el 14B: el atajo lo elige (en equipos con menos, no aparece).
+	const recommended = page.getByRole("button", { name: "Usar el recomendado" });
+	if (await recommended.isVisible()) {
+		await recommended.click();
+		await recommended.waitFor({ state: "detached" });
+		await fileHas("ai-settings.json", "Qwen3-14B", true, "No se aplicó el recomendado");
+	}
+
+	await page.getByText("Claude (Anthropic)", { exact: true }).click();
+	await page.getByLabel("Clave de API", { exact: true }).waitFor();
+	await fileHas("ai-settings.json", '"anthropic"', true, "No se guardó el proveedor");
+	expect(
+		(await page.getByRole("button", { name: "Probar conexión" }).count()) === 0,
+		"Sin clave no se debería poder probar",
+	);
+	await page.getByLabel("Clave de API", { exact: true }).fill("clave-mal-copiada-1234");
+	await page.getByText(/suelen empezar por "sk-ant-"/).waitFor();
+	const fakeKey = "sk-ant-smoke-test-key-0000";
+	await page.getByLabel("Clave de API", { exact: true }).fill(fakeKey);
+	await page.getByRole("button", { name: "Guardar clave" }).click();
+	await page.getByText("…0000").waitFor();
+	const keys = aiFile("ai-keys.json");
+	expect(keys.includes('"anthropic"'), "La clave no se guardó");
+	expect(!keys.includes(fakeKey) && !keys.includes("smoke-test"), "La clave se guardó sin cifrar");
+
+	await page.getByLabel("Modelo", { exact: true }).selectOption("claude-haiku-5-5");
+	await page.getByText("El más rápido y económico.").waitFor();
+	await page
+		.getByLabel("Modelo", { exact: true })
+		.selectOption({ label: "Otro modelo (escribir su ID)…" });
+	await page.getByLabel("ID del modelo").fill("claude-modelo-propio");
+	await page.getByRole("button", { name: "Usar" }).click();
+	await page.getByText("En uso.").waitFor();
+	await fileHas("ai-settings.json", "claude-modelo-propio", true, "No se guardó el modelo propio");
+	await page.screenshot({ path: join(shots, "17-ajustes-claude.png") });
+
+	// El formulario de video usa la IA elegida y lleva a Ajustes.
+	await page.getByRole("button", { name: "Astroinfo" }).click();
+	await page
+		.getByRole("button", { name: /^Generar video/ })
+		.first()
+		.click();
+	await page.getByText("Usa claude-modelo-propio").waitFor();
+	await page.getByRole("button", { name: "Cambiar la IA" }).click();
+	await page.getByRole("heading", { level: 1, name: "Ajustes" }).waitFor();
+
+	await page.getByRole("button", { name: "Quitar" }).click();
+	await page.getByRole("button", { name: "Guardar clave" }).waitFor();
+	await fileHas("ai-keys.json", '"anthropic"', false, "La clave no se borró");
+	await page.getByText("En este equipo (Ollama)", { exact: true }).click();
+	await page.getByText(/Para tu equipo:/).waitFor();
+	await fileHas("ai-settings.json", '"provider": "ollama"', true, "No se volvió a Ollama");
 
 	// Volver al listado desde la barra lateral.
 	await page.getByRole("button", { name: "Todos los proyectos" }).click();

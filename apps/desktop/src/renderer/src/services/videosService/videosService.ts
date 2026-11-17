@@ -1,11 +1,10 @@
 import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
-import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { NewOverlay, OverlayOp } from "@frameflow/core/script/overlays";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 import { unwrap } from "../../utils/unwrap/unwrap";
 
-// Videos, IA y progreso de tareas: única puerta de la interfaz hacia el proceso principal.
+// Videos y progreso de tareas: única puerta de la interfaz hacia el proceso principal.
 export const videosService = {
 	list: (projectId: string): Promise<VideoSummary[]> =>
 		unwrap(window.frameflow.videos.list(projectId)),
@@ -36,7 +35,6 @@ export const videosService = {
 	cancel: (id: string): Promise<void> => unwrap(window.frameflow.videos.cancel(id)),
 	openRender: (id: string, how: "open" | "reveal"): Promise<void> =>
 		unwrap(window.frameflow.videos.openRender(id, how)),
-	aiStatus: (): Promise<LlmStatus> => unwrap(window.frameflow.ai.status()),
 	mediaBaseUrl: (): Promise<string> => unwrap(window.frameflow.app.mediaBaseUrl()),
 	onJobEvent: (listener: (event: JobEvent) => void) => window.frameflow.onJobEvent(listener),
 };

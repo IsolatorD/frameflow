@@ -9,7 +9,7 @@ import { useNavigate, useParams } from "react-router";
 import { usePresets } from "../../hooks/usePresets/usePresets";
 import { useProject } from "../../hooks/useProject/useProject";
 import { useProjects } from "../../hooks/useProjects/useProjects";
-import { projectsNavGroup } from "../../utils/navigation/navigation";
+import { footerNav, projectsNavGroup } from "../../utils/navigation/navigation";
 import { projectPath } from "../../utils/router/router";
 import { BrandSection } from "./BrandSection/BrandSection";
 import { GenerateSection } from "./GenerateSection/GenerateSection";
@@ -40,7 +40,7 @@ export function ProjectPage() {
 				? `No se pudo cargar el proyecto: ${project.error.message}`
 				: "Este proyecto no existe.";
 		return (
-			<AppShell nav={[projectsGroup]} title="Proyecto">
+			<AppShell footer={footerNav(navigate)} nav={[projectsGroup]} title="Proyecto">
 				<p role={project.isPending ? undefined : "alert"} className="text-sm text-zinc-400">
 					{message}
 				</p>
@@ -53,6 +53,7 @@ export function ProjectPage() {
 
 	return (
 		<AppShell
+			footer={footerNav(navigate)}
 			nav={[
 				projectsGroup,
 				{

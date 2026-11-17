@@ -1,5 +1,6 @@
 // Contrato entre el proceso principal (BD, archivos) y la interfaz (React).
 // La interfaz nunca toca la BD: pide cosas por IPC a través de `window.frameflow`.
+import type { AiSettings, AiSettingsView, CloudProviderId } from "@frameflow/core/ai/catalog";
 import type { NichePreset } from "@frameflow/core/presets";
 import type {
 	BrandKit,
@@ -31,7 +32,15 @@ export type FrameflowApi = {
 		updateBrandKit(id: string, brandKit: BrandKit): Promise<IpcResult<ProjectWithBrand>>;
 	};
 	ai: {
+		/** ¿Se puede escribir un guion ahora con la IA elegida? */
 		status(): Promise<IpcResult<LlmStatus>>;
+		/** Ajustes, estado de las claves (nunca las claves) y datos del equipo. */
+		settings(): Promise<IpcResult<AiSettingsView>>;
+		saveSettings(settings: AiSettings): Promise<IpcResult<AiSettings>>;
+		/** Guarda la clave cifrada; null la borra. */
+		setKey(provider: CloudProviderId, key: string | null): Promise<IpcResult<void>>;
+		/** Prueba clave y modelo sin gastar tokens. */
+		test(provider: AiSettings["provider"], model: string): Promise<IpcResult<LlmStatus>>;
 	};
 	videos: {
 		list(projectId: string): Promise<IpcResult<VideoSummary[]>>;
@@ -68,6 +77,10 @@ export const IPC = {
 	projectsCreate: "projects:create",
 	projectsUpdateBrandKit: "projects:update-brand-kit",
 	aiStatus: "ai:status",
+	aiSettings: "ai:settings",
+	aiSaveSettings: "ai:save-settings",
+	aiSetKey: "ai:set-key",
+	aiTest: "ai:test",
 	videosList: "videos:list",
 	videosGet: "videos:get",
 	videosCreate: "videos:create",

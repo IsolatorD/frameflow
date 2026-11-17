@@ -1,13 +1,13 @@
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { OllamaProvider } from "@frameflow/core/script/ai";
 import { openDatabase } from "@frameflow/db/client";
 import { createProjectsRepository } from "@frameflow/db/projects";
 import { createVideosRepository } from "@frameflow/db/videos";
 import { app, BrowserWindow, shell } from "electron";
 import { IPC } from "../shared/api";
 import { registerIpcHandlers } from "./ipc/registerIpcHandlers";
+import { createAiSettingsStore } from "./services/aiSettings";
 import { startMediaServer } from "./services/mediaServer";
 import { createVideoPipeline } from "./services/videoPipeline";
 
@@ -21,8 +21,6 @@ const ttsDir = join(repoRoot, "packages/tts");
 const rendererEntry = join(repoRoot, "packages/renderer-remotion/src/index.ts");
 // Icono de la app (lo genera `pnpm icons` desde brand/). Empaquetada, lo pone build/icon.icns.
 const appIcon = join(app.getAppPath(), "resources/icon.png");
-// Modelo local para el modo automático (configurable).
-const llmModel = process.env.FRAMEFLOW_MODEL ?? "hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M";
 
 function createWindow(): void {
 	const window = new BrowserWindow({
@@ -67,10 +65,16 @@ app.whenReady().then(async () => {
 	const videos = createVideosRepository(db);
 	await videos.recoverInterrupted();
 	const media = await startMediaServer(dataDir);
+	// IA elegida en Ajustes. FRAMEFLOW_MODEL solo cambia el modelo local por defecto (pruebas).
+	const ai = createAiSettingsStore({
+		dataDir,
+		defaultOllamaModel: process.env.FRAMEFLOW_MODEL,
+		ollamaUrl: process.env.OLLAMA_URL,
+	});
 	const pipeline = createVideoPipeline({
 		projects,
 		videos,
-		llm: new OllamaProvider(llmModel, process.env.OLLAMA_URL),
+		llm: () => ai.current(),
 		dataDir,
 		ttsDir,
 		rendererEntry,
@@ -80,7 +84,7 @@ app.whenReady().then(async () => {
 				window.webContents.send(IPC.jobEvent, event);
 		},
 	});
-	registerIpcHandlers({ projects, videos, pipeline, mediaBaseUrl: media.baseUrl });
+	registerIpcHandlers({ projects, videos, pipeline, ai, mediaBaseUrl: media.baseUrl });
 	createWindow();
 
 	app.on("activate", () => {

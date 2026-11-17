@@ -18,6 +18,10 @@ const api: FrameflowApi = {
 	},
 	ai: {
 		status: () => ipcRenderer.invoke(IPC.aiStatus),
+		settings: () => ipcRenderer.invoke(IPC.aiSettings),
+		saveSettings: (settings) => ipcRenderer.invoke(IPC.aiSaveSettings, settings),
+		setKey: (provider, key) => ipcRenderer.invoke(IPC.aiSetKey, provider, key),
+		test: (provider, model) => ipcRenderer.invoke(IPC.aiTest, provider, model),
 	},
 	videos: {
 		list: (projectId) => ipcRenderer.invoke(IPC.videosList, projectId),

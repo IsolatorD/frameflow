@@ -1,0 +1,150 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { totalmem } from "node:os";
+import { join } from "node:path";
+import {
+	AI_PROVIDERS,
+	type AiProviderId,
+	type AiSettings,
+	type AiSettingsView,
+	type ApiKeyState,
+	aiSettingsSchema,
+	type CloudProviderId,
+	defaultAiSettings,
+	isCloudProvider,
+	type KeyStorage,
+	keyHint,
+	recommendLocalModel,
+	type SystemInfo,
+} from "@frameflow/core/ai/catalog";
+import { type ConfiguredLlm, createCloudLlm, createLlm } from "@frameflow/core/ai/providers";
+import { type LlmStatus, OllamaProvider } from "@frameflow/core/script/ai";
+import { safeStorage } from "electron";
+import { z } from "zod";
+
+// Ajustes de IA en la carpeta de datos. Las claves de API van en otro archivo, cifradas con el
+// almacén del sistema (Llavero en macOS, DPAPI en Windows, libsecret/KWallet en Linux).
+// La interfaz nunca recibe una clave: solo si existe y sus últimos 4 caracteres.
+
+const CLOUD = AI_PROVIDERS.filter(isCloudProvider);
+const keysFileSchema = z.partialRecord(z.enum(CLOUD as [CloudProviderId]), z.string());
+const keyInput = z
+	.string()
+	.trim()
+	.min(8, "La clave es demasiado corta")
+	.max(400, "La clave es demasiado larga")
+	.refine((k) => !/\s/.test(k), "La clave no puede tener espacios");
+
+export type AiSettingsStore = ReturnType<typeof createAiSettingsStore>;
+
+export function createAiSettingsStore(opts: {
+	dataDir: string;
+	defaultOllamaModel?: string;
+	ollamaUrl?: string;
+}) {
+	const settingsFile = join(opts.dataDir, "ai-settings.json");
+	const keysFile = join(opts.dataDir, "ai-keys.json");
+
+	const readJson = (file: string): unknown => {
+		if (!existsSync(file)) return undefined;
+		try {
+			return JSON.parse(readFileSync(file, "utf8"));
+		} catch {
+			return undefined; // archivo dañado: se vuelve a los valores por defecto
+		}
+	};
+
+	const getSettings = (): AiSettings => {
+		const parsed = aiSettingsSchema.safeParse(readJson(settingsFile));
+		return parsed.success ? parsed.data : defaultAiSettings(opts.defaultOllamaModel);
+	};
+
+	const readKeys = () => keysFileSchema.catch({}).parse(readJson(keysFile) ?? {});
+
+	const keyStorage = (): KeyStorage => {
+		if (!safeStorage.isEncryptionAvailable()) return "unavailable";
+		// En Linux sin llavero, Electron "cifra" con una clave fija: se avisa en la interfaz.
+		if (process.platform === "linux" && safeStorage.getSelectedStorageBackend() === "basic_text")
+			return "weak";
+		return "secure";
+	};
+
+	const getKey = (provider: CloudProviderId): string | null => {
+		const stored = readKeys()[provider];
+		if (!stored || keyStorage() === "unavailable") return null;
+		try {
+			return safeStorage.decryptString(Buffer.from(stored, "base64"));
+		} catch {
+			return null; // cifrada en otro equipo o con otro usuario: hay que volver a pegarla
+		}
+	};
+
+	const system = (): SystemInfo => ({
+		platform: process.platform,
+		arch: process.arch,
+		ramGb: Math.round(totalmem() / 1024 ** 3),
+	});
+
+	const ollama = (model: string) => new OllamaProvider(model, opts.ollamaUrl);
+
+	return {
+		getSettings,
+
+		saveSettings(input: unknown): AiSettings {
+			const settings = aiSettingsSchema.parse(input);
+			writeFileSync(settingsFile, `${JSON.stringify(settings, null, "\t")}\n`);
+			return settings;
+		},
+
+		/** Guarda (o borra con null) la clave de un proveedor en la nube. */
+		setKey(provider: unknown, key: unknown): void {
+			const id = z.enum(CLOUD as [CloudProviderId]).parse(provider);
+			const keys = readKeys();
+			if (key === null) {
+				delete keys[id];
+			} else {
+				const value = keyInput.parse(key);
+				if (keyStorage() === "unavailable")
+					throw new Error(
+						"Este sistema no permite guardar claves cifradas. Instala un llavero (GNOME Keyring o KWallet) y vuelve a intentarlo.",
+					);
+				keys[id] = safeStorage.encryptString(value).toString("base64");
+			}
+			writeFileSync(keysFile, `${JSON.stringify(keys, null, "\t")}\n`, { mode: 0o600 });
+		},
+
+		async view(): Promise<AiSettingsView> {
+			const info = system();
+			const keys = Object.fromEntries(
+				CLOUD.map((id): [CloudProviderId, ApiKeyState] => {
+					const key = getKey(id);
+					return [id, key ? { set: true, hint: keyHint(key) } : { set: false }];
+				}),
+			) as Record<CloudProviderId, ApiKeyState>;
+			return {
+				settings: getSettings(),
+				keys,
+				keyStorage: keyStorage(),
+				system: info,
+				recommendation: recommendLocalModel(info),
+				ollamaModels: await ollama(getSettings().models.ollama).installedModels(),
+			};
+		},
+
+		/** El proveedor elegido ahora mismo (se crea en cada uso: los ajustes pueden cambiar). */
+		current(): ConfiguredLlm {
+			const settings = getSettings();
+			const key = isCloudProvider(settings.provider) ? getKey(settings.provider) : null;
+			return createLlm(settings, key, opts.ollamaUrl);
+		},
+
+		/** Prueba un proveedor y modelo concretos con la clave guardada (sin gastar tokens). */
+		async test(provider: unknown, model: unknown): Promise<LlmStatus> {
+			const id = z.enum(AI_PROVIDERS as unknown as [AiProviderId]).parse(provider);
+			const name = z.string().trim().min(1, "Elige un modelo").parse(model);
+			if (!isCloudProvider(id)) return ollama(name).status();
+			const key = getKey(id);
+			if (!key) return { available: false, name, reason: "Primero guarda la clave de API." };
+			return createCloudLlm(id, name, key).test();
+		},
+	};
+}

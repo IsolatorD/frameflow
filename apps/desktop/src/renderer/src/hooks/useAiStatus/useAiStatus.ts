@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { videosService } from "../../services/videosService/videosService";
+import { aiService } from "../../services/aiService/aiService";
 
-/** ¿Hay un modelo de IA listo para el modo automático? Se vuelve a comprobar al volver a la app. */
+/** ¿La IA elegida en Ajustes está lista para el modo automático? Se vuelve a comprobar al volver a la app. */
 export function useAiStatus() {
 	return useQuery({
 		queryKey: ["ai", "status"],
-		queryFn: videosService.aiStatus,
+		queryFn: aiService.status,
 		staleTime: 30_000,
 	});
 }

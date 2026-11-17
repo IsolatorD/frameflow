@@ -19,6 +19,8 @@ export interface AppShellNavGroup {
 
 export interface AppShellProps {
 	nav: readonly AppShellNavGroup[];
+	/** Enlaces fijos al pie de la barra lateral (p. ej. Ajustes). */
+	footer?: readonly AppShellNavItem[];
 	title: string;
 	subtitle?: string;
 	/** Contenido sobre el título (p. ej. una ruta de migas). */

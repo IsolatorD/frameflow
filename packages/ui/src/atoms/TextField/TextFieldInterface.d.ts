@@ -9,6 +9,7 @@ export interface TextFieldProps {
 	multiline?: boolean;
 	maxLength?: number;
 	autoFocus?: boolean;
-	type?: "text" | "number";
+	/** "password" oculta el texto y desactiva el autocompletado (claves de API). */
+	type?: "text" | "number" | "password";
 	disabled?: boolean;
 }
