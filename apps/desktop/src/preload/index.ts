@@ -1,3 +1,4 @@
+import type { LocalAiState } from "@frameflow/core/ai/localRuntime";
 import type { JobEvent } from "@frameflow/core/video";
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
 import { type FrameflowApi, IPC } from "../shared/api";
@@ -22,6 +23,14 @@ const api: FrameflowApi = {
 		saveSettings: (settings) => ipcRenderer.invoke(IPC.aiSaveSettings, settings),
 		setKey: (provider, key) => ipcRenderer.invoke(IPC.aiSetKey, provider, key),
 		test: (provider, model) => ipcRenderer.invoke(IPC.aiTest, provider, model),
+		prepareLocal: (model) => ipcRenderer.invoke(IPC.aiPrepareLocal, model),
+		cancelLocal: () => ipcRenderer.invoke(IPC.aiCancelLocal),
+		dismissLocal: () => ipcRenderer.invoke(IPC.aiDismissLocal),
+		onLocalEvent: (listener) => {
+			const handler = (_event: IpcRendererEvent, payload: LocalAiState) => listener(payload);
+			ipcRenderer.on(IPC.aiLocalEvent, handler);
+			return () => ipcRenderer.removeListener(IPC.aiLocalEvent, handler);
+		},
 	},
 	videos: {
 		list: (projectId) => ipcRenderer.invoke(IPC.videosList, projectId),

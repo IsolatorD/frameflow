@@ -56,32 +56,32 @@ export function AiSettingsPanel(props: AiSettingsPanelProps) {
 
 type Inner = AiSettingsPanelProps & { current: AiProviderOption };
 
-function LocalSettings({ current, model, onModelChange, local, ...rest }: Inner) {
+function LocalSettings({
+	current,
+	model,
+	onModelChange,
+	local,
+	onPrepare,
+	onCancelPrepare,
+	onDismissPrepare,
+	...rest
+}: Inner) {
 	const isInstalled = (id: string) => local.installed.includes(id);
-	const installed = local.running && isInstalled(model);
+	const ready = local.running && isInstalled(model);
+	const label = current.models.find((m) => m.id === model)?.label ?? model;
+	const job = local.job;
 	return (
 		<Section
 			title="Modelo en este equipo"
 			description="Se ejecuta con Ollama: no necesita cuenta y el tema del video no sale de tu equipo."
 		>
 			<div className="flex flex-col gap-4">
-				{local.running ? null : (
-					<Notice tone="warning">
-						Ollama no está en marcha. Instálalo desde{" "}
-						<a href={OLLAMA_DOWNLOAD} target="_blank" rel="noreferrer" className="underline">
-							ollama.com/download
-						</a>
-						, ábrelo y vuelve a esta pantalla.
-					</Notice>
-				)}
 				<ModelPicker
 					current={current}
 					model={model}
 					onModelChange={onModelChange}
 					extra={local.installed.filter((id) => !current.models.some((m) => m.id === id))}
-					badge={(id) =>
-						local.running ? (isInstalled(id) ? "Descargado" : "Sin descargar") : null
-					}
+					badge={(id) => (isInstalled(id) ? "Descargado" : (local.modelSize(id) ?? "Descargado"))}
 				/>
 				<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
 					<p className="text-xs text-zinc-400">
@@ -98,22 +98,182 @@ function LocalSettings({ current, model, onModelChange, local, ...rest }: Inner)
 						</button>
 					) : null}
 				</div>
-				{local.running && !installed ? (
-					<Notice tone="info">
-						Este modelo aún no está descargado. Descárgalo desde una terminal con{" "}
-						<code className="rounded bg-black/30 px-1 py-0.5 text-[11px]">ollama pull {model}</code>
-						.
-					</Notice>
-				) : null}
-				<TestRow
-					{...rest}
-					model={model}
-					local={local}
-					current={current}
-					onModelChange={onModelChange}
-				/>
+
+				{job && job.status !== "done" ? (
+					<PrepareProgress
+						job={job}
+						onCancel={onCancelPrepare}
+						onDismiss={onDismissPrepare}
+						onRetry={() => onPrepare(model)}
+					/>
+				) : ready ? (
+					<>
+						{job?.status === "done" ? (
+							<Notice tone="success" onDismiss={onDismissPrepare}>
+								Listo: {job.modelLabel} está descargado y preparado.
+							</Notice>
+						) : null}
+						<p className="text-xs text-zinc-500">
+							{local.engine === "managed"
+								? "Usando el Ollama que descargó Frameflow (se abre y se cierra con la app)."
+								: "Usando el Ollama instalado en tu equipo."}
+						</p>
+						<TestRow
+							{...rest}
+							local={local}
+							model={model}
+							current={current}
+							onModelChange={onModelChange}
+							onPrepare={onPrepare}
+							onCancelPrepare={onCancelPrepare}
+							onDismissPrepare={onDismissPrepare}
+						/>
+					</>
+				) : (
+					<PrepareOffer local={local} model={model} label={label} onPrepare={onPrepare} />
+				)}
 			</div>
 		</Section>
+	);
+}
+
+/** Qué falta y cuánto ocupa; el botón es la confirmación. */
+function PrepareOffer({
+	local,
+	model,
+	label,
+	onPrepare,
+}: {
+	local: Inner["local"];
+	model: string;
+	label: string;
+	onPrepare: (model: string) => void;
+}) {
+	const needsRuntime = local.engine === "missing";
+	const modelSize = local.modelSize(model);
+	const space = local.spaceWarning(model);
+	if (needsRuntime && !local.runtimeSize) {
+		return (
+			<Notice tone="warning">
+				No hay una versión de Ollama para este equipo. Usa un proveedor en la nube o instala Ollama
+				desde{" "}
+				<a href={OLLAMA_DOWNLOAD} target="_blank" rel="noreferrer" className="underline">
+					ollama.com/download
+				</a>
+				.
+			</Notice>
+		);
+	}
+	// Sin tamaño = el modelo ya está en disco: solo falta Ollama.
+	const parts = [
+		needsRuntime ? `Ollama (${local.runtimeSize})` : null,
+		modelSize || !needsRuntime ? `${label}${modelSize ? ` (${modelSize})` : ""}` : null,
+	].filter(Boolean);
+	return (
+		<div className="flex flex-col gap-3 rounded-xl bg-violet-500/5 p-4 ring-1 ring-violet-400/20">
+			<div>
+				<p className="text-sm font-medium text-zinc-100">
+					{needsRuntime ? "Preparar la IA en este equipo" : `${label} aún no está descargado`}
+				</p>
+				<p className="mt-1 text-xs text-zinc-400">
+					Se descargará {parts.join(" y ")}. Es una sola vez: después funciona sin internet.
+					{needsRuntime
+						? " Ollama se guarda dentro de la carpeta de Frameflow; no se instala nada en el sistema."
+						: ""}
+					{local.freeSpace ? ` Espacio libre: ${local.freeSpace}.` : ""}
+				</p>
+			</div>
+			{space ? <p className="text-xs text-amber-300">{space}</p> : null}
+			<Button className="self-start" onClick={() => onPrepare(model)}>
+				{needsRuntime ? "Descargar y preparar" : `Descargar ${label}`}
+			</Button>
+		</div>
+	);
+}
+
+function PrepareProgress({
+	job,
+	onCancel,
+	onDismiss,
+	onRetry,
+}: {
+	job: NonNullable<Inner["local"]["job"]>;
+	onCancel: () => void;
+	onDismiss: () => void;
+	onRetry: () => void;
+}) {
+	const running = job.status === "running";
+	return (
+		<section
+			aria-label={`Preparando ${job.modelLabel}`}
+			className="flex flex-col gap-3 rounded-xl bg-white/[0.03] p-4 ring-1 ring-white/10"
+		>
+			<ol className="flex flex-col gap-3">
+				{job.steps.map((step) => (
+					<li key={step.id} className="flex flex-col gap-1.5">
+						<div className="flex items-center gap-2 text-sm">
+							<span
+								aria-hidden="true"
+								className={`size-2 rounded-full ${
+									step.state === "done"
+										? "bg-emerald-400"
+										: step.state === "active"
+											? running
+												? "animate-pulse bg-violet-400"
+												: "bg-red-400"
+											: "bg-zinc-600"
+								}`}
+							/>
+							<span className={step.state === "pending" ? "text-zinc-500" : "text-zinc-200"}>
+								{step.label}
+							</span>
+							{step.state === "done" ? <span className="text-xs text-zinc-500">Hecho</span> : null}
+						</div>
+						{step.state === "active" && step.fraction !== undefined ? (
+							<div
+								role="progressbar"
+								aria-label={step.label}
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={Math.round(step.fraction * 100)}
+								className="h-1.5 overflow-hidden rounded-full bg-white/10"
+							>
+								<div
+									className="h-full rounded-full bg-violet-400 transition-[width]"
+									style={{ width: `${Math.round(step.fraction * 100)}%` }}
+								/>
+							</div>
+						) : null}
+						{step.state === "active" && step.detail ? (
+							<p className="text-xs text-zinc-500">{step.detail}</p>
+						) : null}
+					</li>
+				))}
+			</ol>
+			{job.notice && running ? <p className="text-xs text-amber-300">{job.notice}</p> : null}
+			{job.status === "error" ? (
+				<p role="alert" className="text-sm text-red-400">
+					{job.error}
+				</p>
+			) : null}
+			{job.status === "cancelled" ? (
+				<p className="text-sm text-zinc-400">Descarga cancelada. Lo descargado se conserva.</p>
+			) : null}
+			<div className="flex gap-3">
+				{running ? (
+					<Button variant="secondary" onClick={onCancel}>
+						Cancelar
+					</Button>
+				) : (
+					<>
+						<Button onClick={onRetry}>{job.status === "error" ? "Reintentar" : "Continuar"}</Button>
+						<Button variant="ghost" onClick={onDismiss}>
+							Cerrar
+						</Button>
+					</>
+				)}
+			</div>
+		</section>
 	);
 }
 
@@ -330,16 +490,28 @@ function TestRow({ onTest, testing, testResult }: Inner) {
 	);
 }
 
-function Notice({ tone, children }: { tone: "info" | "warning"; children: ReactNode }) {
+function Notice({
+	tone,
+	children,
+	onDismiss,
+}: {
+	tone: "info" | "warning" | "success";
+	children: ReactNode;
+	onDismiss?: () => void;
+}) {
+	const colors = {
+		warning: "bg-amber-500/10 text-amber-200 ring-amber-400/20",
+		info: "bg-sky-500/10 text-sky-200 ring-sky-400/20",
+		success: "bg-emerald-500/10 text-emerald-200 ring-emerald-400/20",
+	}[tone];
 	return (
-		<p
-			className={`rounded-lg px-3 py-2 text-xs ring-1 ${
-				tone === "warning"
-					? "bg-amber-500/10 text-amber-200 ring-amber-400/20"
-					: "bg-sky-500/10 text-sky-200 ring-sky-400/20"
-			}`}
-		>
-			{children}
-		</p>
+		<div className={`flex items-start gap-3 rounded-lg px-3 py-2 text-xs ring-1 ${colors}`}>
+			<p className="flex-1">{children}</p>
+			{onDismiss ? (
+				<button type="button" onClick={onDismiss} className="opacity-70 hover:opacity-100">
+					Cerrar
+				</button>
+			) : null}
+		</div>
 	);
 }

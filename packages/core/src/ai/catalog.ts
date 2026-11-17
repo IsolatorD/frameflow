@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { LocalAiState } from "./localRuntime";
 
 // Proveedores de IA para escribir guiones. Este archivo no importa ningún SDK: lo usan tanto el
 // proceso principal (que llama a la IA) como la interfaz (que muestra los ajustes).
@@ -187,4 +188,6 @@ export type AiSettingsView = {
 	recommendation: LocalRecommendation;
 	/** Modelos instalados en Ollama, o null si Ollama no está en marcha. */
 	ollamaModels: string[] | null;
+	/** De dónde sale Ollama y si hay una descarga en curso. */
+	local: LocalAiState;
 };

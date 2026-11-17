@@ -85,8 +85,24 @@ solo en el proceso principal).
   porque los nombres cambian a menudo. "Probar conexión" valida clave y modelo sin gastar tokens.
 - **Recomendación local** según el equipo: < 8 GB de RAM → la nube; 8–16 GB → 8B; ≥ 16 GB → 14B.
   Fuera de Mac con Apple Silicon se avisa de que sin GPU dedicada será lento.
-- Pendiente de probar con claves reales: los tres proveedores en la nube solo tienen tests con
-  clientes simulados.
+- **IA local en un clic** (`core/ai/localRuntime.ts` + `main/services/localAi/`): si el equipo no
+  tiene Ollama o le falta el modelo, Ajustes ofrece descargarlo; pulsar el botón es la confirmación.
+  - Orden de preferencia: un Ollama del usuario en marcha (11434) → el de la app ya descargado → uno
+    del usuario instalado pero cerrado (la app lo arranca) → ofrecer la descarga.
+  - Ollama oficial fijado a una versión (`OLLAMA_VERSION`), descargado de GitHub Releases con
+    reanudación, verificado con el `sha256sum.txt` de la release y extraído en
+    `<datos>/runtime/ollama-<versión>/`. No se instala nada en el sistema ni pide administrador.
+  - La app lo arranca en `127.0.0.1:11435` (no choca con otra instalación) y lo cierra al salir; si
+    quedó uno vivo tras un cierre brusco, lo reutiliza.
+  - Los modelos van a la carpeta estándar de Ollama (`~/.ollama/models`): se comparten con una
+    instalación posterior del usuario. Antes de descargar se comprueba el espacio libre (los ya
+    descargados no cuentan).
+  - Descarga del modelo con `POST /api/pull` (progreso por capas), reintentos ante cortes de red
+    (lo descargado se conserva) y cancelación.
+  - Paquetes: macOS 186 MB; Windows y Linux ≈ 1,6 GB (incluyen las librerías de NVIDIA). Las
+    variantes para AMD (ROCm) quedan pendientes.
+    : los tres proveedores en la nube solo tienen tests con
+    clientes simulados.
 
 ## Cómo repetir la evaluación
 

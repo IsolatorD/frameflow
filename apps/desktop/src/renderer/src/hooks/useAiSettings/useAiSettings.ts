@@ -1,5 +1,7 @@
 import type { AiSettings, AiSettingsView, CloudProviderId } from "@frameflow/core/ai/catalog";
+import type { LocalAiState } from "@frameflow/core/ai/localRuntime";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { aiService } from "../../services/aiService/aiService";
 
 export const AI_KEY = ["ai"] as const;
@@ -44,5 +46,47 @@ export function useTestAi() {
 	return useMutation({
 		mutationFn: ({ provider, model }: { provider: AiSettings["provider"]; model: string }) =>
 			aiService.test(provider, model),
+	});
+}
+
+/**
+ * Progreso de la preparación de la IA local (descarga de Ollama y del modelo), que corre en el
+ * proceso principal aunque se cambie de pantalla. Al terminar se refresca todo lo de la IA.
+ */
+export function useLocalAiEvents() {
+	const queryClient = useQueryClient();
+	useEffect(
+		() =>
+			aiService.onLocalEvent((local: LocalAiState) => {
+				queryClient.setQueryData<AiSettingsView>(SETTINGS_KEY, (view) =>
+					view ? { ...view, local } : view,
+				);
+				if (local.job && local.job.status !== "running")
+					void queryClient.invalidateQueries({ queryKey: AI_KEY });
+			}),
+		[queryClient],
+	);
+}
+
+export function usePrepareLocalAi() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: aiService.prepareLocal,
+		onSuccess: (local) =>
+			queryClient.setQueryData<AiSettingsView>(SETTINGS_KEY, (view) =>
+				view ? { ...view, local } : view,
+			),
+	});
+}
+
+export function useCancelLocalAi() {
+	return useMutation({ mutationFn: aiService.cancelLocal });
+}
+
+export function useDismissLocalAi() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: aiService.dismissLocal,
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: AI_KEY }),
 	});
 }

@@ -432,7 +432,7 @@ export class OllamaProvider implements LlmProvider {
 			: {
 					available: false,
 					name: this.name,
-					reason: `El modelo ${modelLabel("ollama", this.model)} no está instalado en Ollama.`,
+					reason: `El modelo ${modelLabel("ollama", this.model)} no está descargado. Descárgalo en Ajustes.`,
 				};
 	}
 

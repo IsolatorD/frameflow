@@ -8,6 +8,7 @@ import { app, BrowserWindow, shell } from "electron";
 import { IPC } from "../shared/api";
 import { registerIpcHandlers } from "./ipc/registerIpcHandlers";
 import { createAiSettingsStore } from "./services/aiSettings";
+import { createLocalAi } from "./services/localAi/localAi";
 import { startMediaServer } from "./services/mediaServer";
 import { createVideoPipeline } from "./services/videoPipeline";
 
@@ -65,11 +66,24 @@ app.whenReady().then(async () => {
 	const videos = createVideosRepository(db);
 	await videos.recoverInterrupted();
 	const media = await startMediaServer(dataDir);
+	// IA local: usa el Ollama del usuario si lo hay; si no, el que descarga la app (Ajustes).
+	// OLLAMA_URL fija uno concreto; FRAMEFLOW_IGNORE_SYSTEM_OLLAMA=1 prueba la descarga aunque haya otro.
+	const localAi = createLocalAi({
+		dataDir,
+		overrideUrl: process.env.OLLAMA_URL,
+		ignoreSystem: process.env.FRAMEFLOW_IGNORE_SYSTEM_OLLAMA === "1",
+		emit: (state) => {
+			for (const window of BrowserWindow.getAllWindows())
+				window.webContents.send(IPC.aiLocalEvent, state);
+		},
+	});
+	void localAi.detect(); // arranca el Ollama de la app en segundo plano si ya está descargado
+	app.on("will-quit", () => localAi.stop());
 	// IA elegida en Ajustes. FRAMEFLOW_MODEL solo cambia el modelo local por defecto (pruebas).
 	const ai = createAiSettingsStore({
 		dataDir,
 		defaultOllamaModel: process.env.FRAMEFLOW_MODEL,
-		ollamaUrl: process.env.OLLAMA_URL,
+		localAi,
 	});
 	const pipeline = createVideoPipeline({
 		projects,
@@ -84,7 +98,7 @@ app.whenReady().then(async () => {
 				window.webContents.send(IPC.jobEvent, event);
 		},
 	});
-	registerIpcHandlers({ projects, videos, pipeline, ai, mediaBaseUrl: media.baseUrl });
+	registerIpcHandlers({ projects, videos, pipeline, ai, localAi, mediaBaseUrl: media.baseUrl });
 	createWindow();
 
 	app.on("activate", () => {

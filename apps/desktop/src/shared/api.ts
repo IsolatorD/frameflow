@@ -1,6 +1,7 @@
 // Contrato entre el proceso principal (BD, archivos) y la interfaz (React).
 // La interfaz nunca toca la BD: pide cosas por IPC a través de `window.frameflow`.
 import type { AiSettings, AiSettingsView, CloudProviderId } from "@frameflow/core/ai/catalog";
+import type { LocalAiState } from "@frameflow/core/ai/localRuntime";
 import type { NichePreset } from "@frameflow/core/presets";
 import type {
 	BrandKit,
@@ -41,6 +42,12 @@ export type FrameflowApi = {
 		setKey(provider: CloudProviderId, key: string | null): Promise<IpcResult<void>>;
 		/** Prueba clave y modelo sin gastar tokens. */
 		test(provider: AiSettings["provider"], model: string): Promise<IpcResult<LlmStatus>>;
+		/** Descarga Ollama (si falta) y el modelo; el progreso llega por onLocalEvent. */
+		prepareLocal(model: string): Promise<IpcResult<LocalAiState>>;
+		cancelLocal(): Promise<IpcResult<void>>;
+		/** Oculta el aviso de una preparación terminada o fallida. */
+		dismissLocal(): Promise<IpcResult<void>>;
+		onLocalEvent(listener: (state: LocalAiState) => void): () => void;
 	};
 	videos: {
 		list(projectId: string): Promise<IpcResult<VideoSummary[]>>;
@@ -81,6 +88,10 @@ export const IPC = {
 	aiSaveSettings: "ai:save-settings",
 	aiSetKey: "ai:set-key",
 	aiTest: "ai:test",
+	aiPrepareLocal: "ai:prepare-local",
+	aiCancelLocal: "ai:cancel-local",
+	aiDismissLocal: "ai:dismiss-local",
+	aiLocalEvent: "ai:local-event",
 	videosList: "videos:list",
 	videosGet: "videos:get",
 	videosCreate: "videos:create",

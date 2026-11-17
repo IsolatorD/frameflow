@@ -41,7 +41,7 @@ type Deps = {
 	projects: ProjectsRepository;
 	videos: VideosRepository;
 	/** IA elegida en Ajustes en el momento de usarla. */
-	llm: () => ConfiguredLlm;
+	llm: () => Promise<ConfiguredLlm>;
 	/** Carpeta de datos: los proyectos viven en <dataDir>/projects/<slug>/. */
 	dataDir: string;
 	ttsDir: string;
@@ -142,7 +142,7 @@ export function createVideoPipeline(deps: Deps) {
 		signal: AbortSignal,
 		progress: (p: number | null, message: string) => void,
 	) => {
-		const script = await generateScript(deps.llm(), {
+		const script = await generateScript(await deps.llm(), {
 			topic: video.topic,
 			tone: project.brandKit.tone,
 			language: video.language,
@@ -256,7 +256,7 @@ export function createVideoPipeline(deps: Deps) {
 	const targetSeconds = new Map<string, number>();
 
 	return {
-		aiStatus: (): Promise<LlmStatus> => deps.llm().status(),
+		aiStatus: async (): Promise<LlmStatus> => (await deps.llm()).status(),
 
 		isBusy: (videoId: string) => running.has(videoId),
 
@@ -267,7 +267,7 @@ export function createVideoPipeline(deps: Deps) {
 				throw new Error("Ese idioma no está activado en el canal");
 			}
 			if (data.mode === "auto") {
-				const status = await deps.llm().status();
+				const status = await (await deps.llm()).status();
 				if (!status.available) throw new Error(`${status.reason} Usa el modo paso a paso.`);
 			}
 			const storyboard = assembleStoryboard({

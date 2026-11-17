@@ -1,4 +1,5 @@
 import type { AiSettings, AiSettingsView, CloudProviderId } from "@frameflow/core/ai/catalog";
+import type { LocalAiState } from "@frameflow/core/ai/localRuntime";
 import type { LlmStatus } from "@frameflow/core/script/ai";
 import { unwrap } from "../../utils/unwrap/unwrap";
 
@@ -12,4 +13,10 @@ export const aiService = {
 		unwrap(window.frameflow.ai.setKey(provider, key)),
 	test: (provider: AiSettings["provider"], model: string): Promise<LlmStatus> =>
 		unwrap(window.frameflow.ai.test(provider, model)),
+	prepareLocal: (model: string): Promise<LocalAiState> =>
+		unwrap(window.frameflow.ai.prepareLocal(model)),
+	cancelLocal: (): Promise<void> => unwrap(window.frameflow.ai.cancelLocal()),
+	dismissLocal: (): Promise<void> => unwrap(window.frameflow.ai.dismissLocal()),
+	onLocalEvent: (listener: (state: LocalAiState) => void) =>
+		window.frameflow.ai.onLocalEvent(listener),
 };

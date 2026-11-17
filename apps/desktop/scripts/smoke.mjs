@@ -2,6 +2,7 @@
 // crea un proyecto desde la interfaz y guarda capturas en test-results/.
 // Uso: pnpm smoke   (compila y ejecuta)
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
@@ -82,6 +83,13 @@ const testImage = join(home, "test-image.png");
 	);
 }
 
+// Ollama simulado (salvo con SMOKE_AI, que usa el real): sin modelos al empezar; las descargas
+// avanzan en segundos, la primera del 8B se corta una vez ("EOF") para probar el reintento, y la
+// del 14B va lenta para poder cancelarla.
+// SMOKE_RUNTIME=1: ignora el Ollama del sistema y descarga el de verdad desde la app (red real).
+const realRuntime = Boolean(process.env.SMOKE_RUNTIME);
+const fakeOllama = process.env.SMOKE_AI || realRuntime ? null : await startFakeOllama();
+
 const app = await electron.launch({
 	args: [appDir],
 	cwd: appDir,
@@ -90,6 +98,8 @@ const app = await electron.launch({
 		FRAMEFLOW_HOME: home,
 		FRAMEFLOW_TEST_MUSIC: testMusic,
 		FRAMEFLOW_TEST_MEDIA: testImage,
+		...(fakeOllama ? { OLLAMA_URL: fakeOllama.url } : {}),
+		...(realRuntime ? { FRAMEFLOW_IGNORE_SYSTEM_OLLAMA: "1" } : {}),
 	},
 });
 const errors = [];
@@ -574,10 +584,34 @@ try {
 		"Ollama debería ser el proveedor por defecto",
 	);
 	await page.getByText(/Para tu equipo:/).waitFor();
+	if (realRuntime) {
+		// Sin Ollama: un clic descarga Ollama (verificado) y prepara el modelo.
+		await page.getByText("Preparar la IA en este equipo").waitFor();
+		await page.screenshot({ path: join(shots, "16r-ajustes-preparar.png") });
+		await page.getByRole("button", { name: "Descargar y preparar" }).click();
+		await page.getByRole("progressbar", { name: /Descargar Ollama/ }).waitFor();
+		await page.screenshot({ path: join(shots, "16r-ajustes-ollama.png") });
+		await page.getByText(/Listo: .* está descargado y preparado/).waitFor({ timeout: 900_000 });
+		await page.getByText("Usando el Ollama que descargó Frameflow").waitFor();
+	}
+	if (fakeOllama) {
+		// El modelo no está: se ofrece descargarlo; el botón es la confirmación.
+		await page.getByText("Qwen3 8B aún no está descargado").waitFor();
+		await page.screenshot({ path: join(shots, "16a-ajustes-descargar.png") });
+		await page.getByRole("button", { name: "Descargar Qwen3 8B" }).click();
+		await page.getByRole("progressbar", { name: "Descargar Qwen3 8B" }).waitFor();
+		// La primera descarga se corta: aviso de reintento y sigue sola.
+		await page.getByText(/Se cortó la conexión; reintentando/).waitFor({ timeout: 15_000 });
+		await page.screenshot({ path: join(shots, "16b-ajustes-descargando.png") });
+		await page
+			.getByText("Listo: Qwen3 8B está descargado y preparado.")
+			.waitFor({ timeout: 30_000 });
+		await page.getByText("Usando el Ollama instalado en tu equipo.").waitFor();
+	}
 	await page.getByRole("button", { name: "Probar conexión" }).click();
 	await page
 		.getByRole("status")
-		.filter({ hasText: /Todo listo|Ollama|instalado/ })
+		.filter({ hasText: /Todo listo/ })
 		.waitFor();
 	await page.screenshot({ path: join(shots, "16-ajustes-local.png") });
 	// Con 16 GB o más se recomienda el 14B: el atajo lo elige (en equipos con menos, no aparece).
@@ -586,6 +620,15 @@ try {
 		await recommended.click();
 		await recommended.waitFor({ state: "detached" });
 		await fileHas("ai-settings.json", "Qwen3-14B", true, "No se aplicó el recomendado");
+		if (fakeOllama) {
+			// Cancelar a medias conserva lo descargado y permite continuar.
+			await page.getByRole("button", { name: "Descargar Qwen3 14B" }).click();
+			await page.getByRole("progressbar", { name: "Descargar Qwen3 14B" }).waitFor();
+			await page.getByRole("button", { name: "Cancelar" }).click();
+			await page.getByText("Descarga cancelada. Lo descargado se conserva.").waitFor();
+			await page.getByRole("button", { name: "Cerrar" }).click();
+			await page.getByRole("button", { name: "Descargar Qwen3 14B" }).waitFor();
+		}
 	}
 
 	await page.getByText("Claude (Anthropic)", { exact: true }).click();
@@ -642,7 +685,49 @@ try {
 	console.log(`OK: proyecto creado y panel navegable. Capturas en ${shots}`);
 } finally {
 	await app.close();
+	fakeOllama?.close();
 	// SMOKE_KEEP=1 conserva la carpeta de datos (BD, voces, MP4) para inspeccionarla.
 	if (process.env.SMOKE_KEEP) console.log(`Datos conservados en ${home}`);
 	else rmSync(home, { recursive: true, force: true });
+}
+
+async function startFakeOllama() {
+	const installed = new Set();
+	let cutOnce = true;
+	const server = createServer(async (req, res) => {
+		if (req.url === "/api/version") return json(res, { version: "0.0.0-smoke" });
+		if (req.url === "/api/tags")
+			return json(res, { models: [...installed].map((name) => ({ name })) });
+		if (req.url === "/api/pull" && req.method === "POST") {
+			let body = "";
+			for await (const chunk of req) body += chunk;
+			const { model } = JSON.parse(body);
+			const slow = model.includes("14B");
+			res.writeHead(200, { "content-type": "application/x-ndjson" });
+			const line = (data) => res.write(`${JSON.stringify(data)}\n`);
+			line({ status: "pulling manifest" });
+			const total = 5 * 1024 ** 3;
+			for (let i = 1; i <= 10; i++) {
+				if (res.destroyed) return;
+				await new Promise((r) => setTimeout(r, slow ? 800 : 120));
+				line({ status: "pulling a1", digest: "sha256:a1", total, completed: (total * i) / 10 });
+				if (i === 4 && cutOnce && !slow) {
+					cutOnce = false;
+					line({ error: "max retries exceeded: EOF" });
+					return res.end();
+				}
+			}
+			installed.add(model);
+			line({ status: "success" });
+			return res.end();
+		}
+		res.writeHead(404).end();
+	});
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	return { url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() };
+}
+
+function json(res, data) {
+	res.writeHead(200, { "content-type": "application/json" });
+	res.end(JSON.stringify(data));
 }

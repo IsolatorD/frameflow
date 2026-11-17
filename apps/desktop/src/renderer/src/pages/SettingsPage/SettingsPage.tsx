@@ -7,18 +7,24 @@ import {
 	modelLabel,
 	PROVIDERS,
 } from "@frameflow/core/ai/catalog";
+import { formatBytes } from "@frameflow/core/ai/localRuntime";
 import { AiSettingsPanel } from "@frameflow/ui/src/organisms/AiSettingsPanel/AiSettingsPanel";
 import type { AiProviderOption } from "@frameflow/ui/src/organisms/AiSettingsPanel/AiSettingsPanelInterface";
 import { AppShell } from "@frameflow/ui/src/templates/AppShell/AppShell";
 import { useNavigate } from "react-router";
 import {
 	useAiSettings,
+	useCancelLocalAi,
+	useDismissLocalAi,
+	useLocalAiEvents,
+	usePrepareLocalAi,
 	useSaveAiSettings,
 	useSetAiKey,
 	useTestAi,
 } from "../../hooks/useAiSettings/useAiSettings";
 import { useProjects } from "../../hooks/useProjects/useProjects";
 import { footerNav, projectsNavGroup } from "../../utils/navigation/navigation";
+import { localModelSize, spaceWarning, toPrepareJob } from "./SettingsPage.constants";
 
 const PROVIDER_OPTIONS: AiProviderOption[] = AI_PROVIDERS.map((id) => ({
 	id,
@@ -40,6 +46,10 @@ export function SettingsPage() {
 	const save = useSaveAiSettings();
 	const setKey = useSetAiKey();
 	const test = useTestAi();
+	const prepare = usePrepareLocalAi();
+	const cancelPrepare = useCancelLocalAi();
+	const dismissPrepare = useDismissLocalAi();
+	useLocalAiEvents();
 
 	const data = view.data;
 	const settings = data?.settings;
@@ -75,6 +85,18 @@ export function SettingsPage() {
 					}
 					local={{
 						running: data.ollamaModels !== null,
+						engine: data.local.engine,
+						runtimeSize: data.local.runtime ? `${data.local.runtime.sizeMb} MB` : null,
+						freeSpace: data.local.freeBytes !== null ? formatBytes(data.local.freeBytes) : null,
+						// Ya en disco (p. ej. de otro Ollama): no hay que bajarlo otra vez.
+						modelSize: (id) => (data.local.modelsOnDisk.includes(id) ? null : localModelSize(id)),
+						spaceWarning: (id) => spaceWarning(data.local, id),
+						job: data.local.job
+							? toPrepareJob(
+									data.local.job,
+									data.local.runtime ? formatBytes(data.local.runtime.sizeMb * 1024 ** 2) : null,
+								)
+							: null,
 						installed: (data.ollamaModels ?? []).map(normalizeOllama),
 						recommendation:
 							data.recommendation.kind === "model"
@@ -96,6 +118,12 @@ export function SettingsPage() {
 					}}
 					keySaving={setKey.isPending}
 					keyError={setKey.error?.message}
+					onPrepare={(id) => {
+						test.reset();
+						prepare.mutate(id);
+					}}
+					onCancelPrepare={() => cancelPrepare.mutate()}
+					onDismissPrepare={() => dismissPrepare.mutate()}
 					onTest={() => test.mutate({ provider, model })}
 					testing={test.isPending}
 					testResult={
@@ -112,7 +140,7 @@ export function SettingsPage() {
 								? { ok: false, text: test.error.message }
 								: null
 					}
-					error={save.error?.message}
+					error={save.error?.message ?? prepare.error?.message}
 				/>
 			)}
 		</AppShell>

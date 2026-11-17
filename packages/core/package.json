@@ -18,7 +18,8 @@
 		"./script/overlays": "./src/script/overlays.ts",
 		"./storyboard/keyframes": "./src/storyboard/keyframes.ts",
 		"./ai/catalog": "./src/ai/catalog.ts",
-		"./ai/providers": "./src/ai/providers/index.ts"
+		"./ai/providers": "./src/ai/providers/index.ts",
+		"./ai/localRuntime": "./src/ai/localRuntime.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

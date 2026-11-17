@@ -1,3 +1,4 @@
+import { PROVIDERS } from "@frameflow/core/ai/catalog";
 import { BUILT_IN_PRESETS } from "@frameflow/core/presets";
 import type { BrandKit, CreateProjectInput } from "@frameflow/core/project";
 import type { Script, VideoSettings } from "@frameflow/core/script";
@@ -10,6 +11,7 @@ import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { z } from "zod";
 import { IPC, type IpcResult } from "../../shared/api";
 import type { AiSettingsStore } from "../services/aiSettings";
+import type { LocalAi } from "../services/localAi/localAi";
 import {
 	IMAGE_EXTENSIONS,
 	MUSIC_EXTENSIONS,
@@ -40,9 +42,10 @@ export function registerIpcHandlers(deps: {
 	videos: VideosRepository;
 	pipeline: VideoPipeline;
 	ai: AiSettingsStore;
+	localAi: LocalAi;
 	mediaBaseUrl: string;
 }): void {
-	const { projects, videos, pipeline, ai } = deps;
+	const { projects, videos, pipeline, ai, localAi } = deps;
 
 	ipcMain.handle(IPC.appMediaBaseUrl, () => wrap(() => deps.mediaBaseUrl));
 	ipcMain.handle(IPC.presetsList, () => wrap(() => [...BUILT_IN_PRESETS]));
@@ -67,6 +70,15 @@ export function registerIpcHandlers(deps: {
 	ipcMain.handle(IPC.aiTest, (_e, provider: unknown, model: unknown) =>
 		wrap(() => ai.test(provider, model)),
 	);
+	ipcMain.handle(IPC.aiPrepareLocal, (_e, model: unknown) =>
+		wrap(() => {
+			const id = z.string().trim().min(1).parse(model);
+			const known = PROVIDERS.ollama.models.find((m) => m.id === id);
+			return localAi.prepare(id, known?.sizeGb ?? null);
+		}),
+	);
+	ipcMain.handle(IPC.aiCancelLocal, () => wrap(() => localAi.cancel()));
+	ipcMain.handle(IPC.aiDismissLocal, () => wrap(() => localAi.dismiss()));
 	ipcMain.handle(IPC.videosList, (_e, projectId: unknown) =>
 		wrap(() => videos.list(uuid(projectId))),
 	);

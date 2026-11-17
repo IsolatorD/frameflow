@@ -36,6 +36,8 @@ pnpm typecheck
 pnpm --filter @frameflow/desktop smoke   # compila, abre la app y recorre proyecto → marca → video (capturas en test-results/)
 SMOKE_FULL=1 pnpm --filter @frameflow/desktop smoke   # además genera voz real y el MP4 (tarda minutos)
 SMOKE_AI=1 pnpm --filter @frameflow/desktop smoke     # además prueba el modo automático con la IA real
+SMOKE_RUNTIME=1 pnpm --filter @frameflow/desktop smoke  # ignora tu Ollama y descarga el de la app desde Ajustes (red real)
+FRAMEFLOW_LIVE_RUNTIME=1 pnpm exec vitest run apps/desktop/src/main/services/localAi   # lo mismo, sin interfaz
 FRAMEFLOW_LIVE_AI=1 pnpm --filter @frameflow/core exec vitest run ai.live   # guion con el modelo real
 pnpm --filter @frameflow/db generate     # nueva migración tras cambiar packages/db/src/schema.ts
 ```
@@ -44,7 +46,8 @@ pnpm --filter @frameflow/db generate     # nueva migración tras cambiar package
 
 - **Voz:** `brew install uv espeak-ng`. La primera vez, uv instala el entorno de `packages/tts` y Kokoro
   descarga su modelo (unos minutos); después se reutiliza.
-- **Modo automático (IA):** se elige en **Ajustes**: Ollama en este equipo (Qwen3 8B o 14B) o
+- **Modo automático (IA):** se elige en **Ajustes**: Ollama en este equipo (Qwen3 8B o 14B; si no
+  tienes Ollama, la app lo descarga con un clic) o
   Claude, OpenAI o Gemini con tu clave de API (ver `docs/04-guion-ia.md`). `FRAMEFLOW_MODEL` cambia el
   modelo local por defecto. Sin IA lista, la app ofrece solo el modo paso a paso.
 - Los videos se guardan en `~/Frameflow/projects/<canal>/videos/<id>/` (voz y `renders/v<versión>.mp4`).

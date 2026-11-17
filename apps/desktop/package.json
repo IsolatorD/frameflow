@@ -30,6 +30,7 @@
 		"react-dom": "^19.3.1",
 		"react-router": "^7.18.5",
 		"remotion": "4.0.543",
+		"tar": "^7.5.23",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {
