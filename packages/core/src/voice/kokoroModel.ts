@@ -22,8 +22,11 @@ export const KOKORO_MODELS = {
 } as const;
 export type KokoroVariant = keyof typeof KOKORO_MODELS;
 
-/** Variante por defecto: la completa suena idéntica a la que usaba la app en Python. */
-export const DEFAULT_KOKORO_VARIANT: KokoroVariant = "full";
+/**
+ * Variante por defecto: la cuantizada (92 MB) suena bien al oído, se entiende igual y es el doble
+ * de rápida que la completa (325 MB, idéntica a la que usaba la app en Python).
+ */
+export const DEFAULT_KOKORO_VARIANT: KokoroVariant = "quantized";
 
 /** Voces disponibles → SHA-256 de su archivo (voices/<id>.bin, 510×256 float32). */
 export const KOKORO_VOICES: Record<string, string> = {

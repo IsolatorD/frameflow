@@ -20,27 +20,28 @@ igual en macOS, Windows y Linux.
 4. Los audios se nombran con un hash de voz + velocidad + texto, **igual que antes**: las voces
    generadas con la versión de Python se reutilizan.
 
-El modelo (325 MB) y cada voz (0,5 MB) se descargan la primera vez a
+El modelo (92 MB, cuantizado) y cada voz (0,5 MB) se descargan la primera vez a
 `<datos>/models/kokoro-<revisión>/`, desde una revisión fijada de Hugging Face, y se verifican con
 SHA-256 (`core/voice/kokoroModel.ts`). Textos largos se parten por frases para no pasar del límite
 del modelo (510 fonemas).
 
 ## Comparación con la versión de Python (4 frases, `em_alex` y `ef_dora`)
 
-| Variante                     | Parecido al audio de Python | Se entiende (Whisper) | Tiempo por frase |
-| ---------------------------- | --------------------------- | --------------------- | ---------------- |
-| Python (antes)               | —                           | igual                 | ~0,55 s          |
-| **Node, completo (325 MB)**  | **idéntico** (r = 0,99)     | igual                 | ~0,8–1,3 s       |
-| Node, cuantizado (92 MB)     | distinto (hay que oírlo)    | igual                 | ~0,4–0,6 s       |
-| Node, media precisión (fp16) | genera silencio en CPU      | —                     | —                |
+| Variante                     | Parecido al audio de Python  | Se entiende (Whisper) | Tiempo por frase |
+| ---------------------------- | ---------------------------- | --------------------- | ---------------- |
+| Python (antes)               | —                            | igual                 | ~0,55 s          |
+| Node, completo (325 MB)      | idéntico (r = 0,99)          | igual                 | ~0,8–1,3 s       |
+| **Node, cuantizado (92 MB)** | distinto, suena bien al oído | igual                 | ~0,4–0,6 s       |
+| Node, media precisión (fp16) | genera silencio en CPU       | —                     | —                |
 
 - Los fonemas de 75 frases (narraciones reales de guiones y frases difíciles: signos, comillas,
   paréntesis, siglas, palabras en inglés) salen **idénticos** a los de Python
   (`services/voice/phonemes.test.ts`, contra `fixtures/phonemes-es.json`).
 - Tiempos por palabra: en las pausas coinciden con el silencio real; dentro del habla continua
   quedan ~100 ms más tarde que los de Whisper (que a su vez falla en la primera palabra).
-- Por defecto se usa el modelo completo (`DEFAULT_KOKORO_VARIANT`); el cuantizado es una línea si al
-  oírlo convence.
+- **Por defecto, el cuantizado** (`DEFAULT_KOKORO_VARIANT`): escuchado frente al de Python suena
+  bien, pesa un tercio y es el doble de rápido. El completo queda disponible cambiando esa línea.
+  Los audios ya generados no se rehacen al cambiar de variante.
 - Inglés: eSpeak + las reglas de `misaki` para inglés. En Python se usaba un diccionario
   (`misaki.en`), así que el inglés puede sonar algo distinto; el español es idéntico.
 

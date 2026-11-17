@@ -44,7 +44,7 @@ pnpm --filter @frameflow/db generate     # nueva migración tras cambiar package
 ### Requisitos para generar videos
 
 - **Voz:** nada que instalar. Kokoro corre dentro de la app (Node + ONNX Runtime); la primera vez
-  descarga su modelo (325 MB) y lo verifica. Ver `docs/05-voz.md`.
+  descarga su modelo (92 MB) y lo verifica. Ver `docs/05-voz.md`.
 - **Modo automático (IA):** se elige en **Ajustes**: Ollama en este equipo (Qwen3 8B o 14B; si no
   tienes Ollama, la app lo descarga con un clic) o
   Claude, OpenAI o Gemini con tu clave de API (ver `docs/04-guion-ia.md`). Por defecto usa el modelo local recomendado para el
