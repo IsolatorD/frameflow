@@ -1,3 +1,8 @@
+import type {
+	VisualStyleChoice,
+	VisualStyleValue,
+} from "../../molecules/VisualStylePicker/VisualStylePickerInterface";
+
 export interface MusicDraft {
 	src: string;
 	label: string;
@@ -8,6 +13,8 @@ export interface MusicDraft {
 
 export interface VideoSettingsDraft {
 	captions: { enabled: boolean; maxWordsPerPage: number };
+	/** Estilo visual de este video (viene del proyecto al crearlo). */
+	visualStyle: VisualStyleValue;
 	ctaText: string;
 	music: MusicDraft | null;
 }
@@ -17,6 +24,10 @@ export interface VideoSettingsPanelProps {
 	onSave: (settings: VideoSettingsDraft) => void;
 	/** Abre el selector de archivos; devuelve la música elegida o null si se cancela. */
 	onPickMusic: () => Promise<MusicDraft | null>;
+	/** Estilos visuales disponibles (catálogo). */
+	visualStyles: readonly VisualStyleChoice[];
+	/** Nombre del estilo del proyecto, para indicarlo ("Holograma · Planeta"). */
+	projectStyleLabel?: string;
 	wordsPerPageRange: { min: number; max: number };
 	volumeRange: { min: number; max: number; step: number };
 	onDirtyChange?: (dirty: boolean) => void;

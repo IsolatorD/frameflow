@@ -179,6 +179,10 @@ try {
 	expect((await captionWords.count()) === 3, "La vista previa debería mostrar 3 palabras");
 	await page.getByLabel("Llamada a la acción").fill("Síguenos para más datos del espacio");
 	await page.getByLabel("Hashtags por defecto").fill("astronomía, espacio #Astronomía");
+	// Estilo visual del proyecto: Holograma con el modelo del satélite (lo heredan los videos nuevos).
+	await page.getByText("Holograma", { exact: true }).click();
+	await page.locator("#brand-option-model").selectOption("satellite");
+	await page.getByText(/Basado en «hologram-hud» de Lemo-Opuscar/).waitFor();
 	await status.getByText("Cambios sin guardar").waitFor();
 
 	// Salir con cambios pide confirmación; "Seguir editando" mantiene el borrador.
@@ -268,7 +272,22 @@ try {
 
 	// Ajustes del video: llamada a la acción y música de fondo.
 	await page.getByRole("tab", { name: /Ajustes del video/ }).click();
-	await page.getByLabel("Texto").fill("Suscríbete a Astroinfo");
+	// El video heredó el estilo del proyecto, y la vista previa lo dibuja (un canvas).
+	expect(
+		await page.getByRole("radio", { name: /^Holograma/ }).isChecked(),
+		"El video debería heredar el estilo Holograma del proyecto",
+	);
+	expect(
+		(await page.locator("#video-option-model").inputValue()) === "satellite",
+		"El video debería heredar el modelo del satélite",
+	);
+	await page.getByText(/El del proyecto es «Holograma · Satélite»/).waitFor();
+	expect(
+		(await page.locator("canvas").count()) > 0,
+		"La vista previa debería dibujar el holograma",
+	);
+	await page.screenshot({ path: join(shots, "11a-holograma.png") });
+	await page.locator("#video-cta").fill("Suscríbete a Astroinfo");
 	await page.getByRole("button", { name: "+ Añadir música" }).click();
 	await page.getByText("♪ test-music.wav").waitFor();
 	await page.getByLabel("Volumen").fill("0.3");

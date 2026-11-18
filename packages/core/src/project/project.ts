@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveVisualStyle, visualStyleSchema } from "../look/looks";
 import type { NichePreset } from "../presets/presets";
 import { formatSchema, themeSchema, type VideoStyle } from "../storyboard/schema";
 
@@ -51,6 +52,8 @@ export const brandKitSchema = z.object({
 	}),
 	defaultHashtags: z.array(z.string().regex(/^#[\p{L}\p{N}_]+$/u)).max(30, "Máximo 30 hashtags"),
 	ctaText: z.string().trim().max(120, "La llamada a la acción admite hasta 120 caracteres"),
+	/** Estilo visual por defecto de los videos del proyecto (cada video puede cambiarlo). */
+	visualStyle: visualStyleSchema.optional(),
 });
 export type BrandKit = z.infer<typeof brandKitSchema>;
 
@@ -149,6 +152,8 @@ export const brandKitFromPreset = (
 /** Copia de la marca que se guarda dentro de cada video al generarlo. */
 export const videoStyleFromBrandKit = (brandKit: BrandKit): VideoStyle => ({
 	theme: { ...brandKit.theme },
+	// Marcas guardadas antes de los estilos visuales no traen el campo: "Libre".
+	visualStyle: resolveVisualStyle(brandKit.visualStyle),
 	fontFamily: brandKit.fontFamily,
 	captions: { ...brandKit.captions },
 });

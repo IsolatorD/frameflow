@@ -1,3 +1,4 @@
+import { resolveVisualStyle, VISUAL_STYLES } from "@frameflow/core/look";
 import {
 	brandThemeWarnings,
 	normalizeHashtags,
@@ -8,7 +9,7 @@ import {
 import { Button } from "@frameflow/ui/src/atoms/Button/Button";
 import { Dialog } from "@frameflow/ui/src/molecules/Dialog/Dialog";
 import { BrandKitEditor } from "@frameflow/ui/src/organisms/BrandKitEditor/BrandKitEditor";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useBlocker } from "react-router";
 import { useUpdateBrandKit } from "../../../hooks/useUpdateBrandKit/useUpdateBrandKit";
 import { editorLanguages, fontOptions } from "./BrandSection.constants";
@@ -18,11 +19,17 @@ export function BrandSection({ project }: { project: ProjectWithBrand }) {
 	const update = useUpdateBrandKit(project.id);
 	const [dirty, setDirty] = useState(false);
 	const blocker = useBlocker(dirty);
+	// Marcas guardadas antes de los estilos visuales no traen el campo: "Libre".
+	const value = useMemo(
+		() => ({ ...project.brandKit, visualStyle: resolveVisualStyle(project.brandKit.visualStyle) }),
+		[project.brandKit],
+	);
 
 	return (
 		<>
 			<BrandKitEditor
-				value={project.brandKit}
+				value={value}
+				visualStyles={VISUAL_STYLES}
 				languages={editorLanguages(project)}
 				fontOptions={fontOptions(project.brandKit.fontFamily)}
 				speedRange={SPEED_RANGE}

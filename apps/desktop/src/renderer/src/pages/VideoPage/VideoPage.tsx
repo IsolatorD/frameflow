@@ -1,3 +1,9 @@
+import {
+	FREE_STYLE,
+	resolveVisualStyle,
+	VISUAL_STYLES,
+	visualStyleLabel,
+} from "@frameflow/core/look";
 import { WORDS_PER_PAGE_RANGE } from "@frameflow/core/project";
 import {
 	EXTRA_TIME_RANGE,
@@ -142,10 +148,11 @@ export function VideoPage() {
 		() => (video.data ? scriptFromStoryboard(video.data.storyboard) : null),
 		[video.data],
 	);
-	const settings = useMemo(
-		() => (video.data ? videoSettingsFromStoryboard(video.data.storyboard) : null),
-		[video.data],
-	);
+	const settings = useMemo(() => {
+		if (!video.data) return null;
+		const value = videoSettingsFromStoryboard(video.data.storyboard);
+		return { ...value, visualStyle: value.visualStyle ?? FREE_STYLE };
+	}, [video.data]);
 	// Memorizado: el editor de subtítulos reinicia su borrador cuando cambian las escenas.
 	const captionScenes = useMemo(
 		() => (video.data ? captionScenesOf(video.data.storyboard) : []),
@@ -372,6 +379,12 @@ export function VideoPage() {
 									value={settings}
 									onSave={(next) => actions.saveSettings.mutate(next)}
 									onPickMusic={() => actions.pickMusic.mutateAsync()}
+									visualStyles={VISUAL_STYLES}
+									projectStyleLabel={
+										project.data?.brandKit
+											? visualStyleLabel(resolveVisualStyle(project.data.brandKit.visualStyle))
+											: undefined
+									}
 									wordsPerPageRange={WORDS_PER_PAGE_RANGE}
 									volumeRange={MUSIC_VOLUME_RANGE}
 									onDirtyChange={setSettingsDirty}

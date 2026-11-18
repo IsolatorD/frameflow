@@ -10,7 +10,8 @@
 			"!**/drizzle/meta",
 			"!**/.venv",
 			"!**/test-results",
-			"!**/build/remotion-bundle"
+			"!**/build/remotion-bundle",
+			"!**/looks/*/vendor"
 		]
 	},
 	"formatter": {

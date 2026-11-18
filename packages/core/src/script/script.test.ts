@@ -275,6 +275,30 @@ describe("assembleStoryboard", () => {
 		expect(scriptFromStoryboard(sb).scenes[0]?.settings).toBeUndefined();
 	});
 
+	it("el estilo visual se cambia en los ajustes del video sin tocar el guion", () => {
+		const sb = assembleStoryboard({
+			script,
+			language: "es",
+			format: "9:16",
+			style,
+			ctaText: "Hola",
+		});
+		expect(videoSettingsFromStoryboard(sb).visualStyle).toEqual({ id: "libre", options: {} });
+		const holo = applyVideoSettings(sb, {
+			...videoSettingsFromStoryboard(sb),
+			visualStyle: { id: "hologram", options: { model: "satellite" } },
+		});
+		expect(holo.style.visualStyle).toEqual({ id: "hologram", options: { model: "satellite" } });
+		expect(scriptFromStoryboard(holo)).toEqual(scriptFromStoryboard(sb));
+		// Sin estilo en los ajustes, se conserva el que tenía.
+		const same = applyVideoSettings(holo, {
+			captions: holo.style.captions,
+			ctaText: "Hola",
+			music: null,
+		});
+		expect(same.style.visualStyle?.id).toBe("hologram");
+	});
+
 	it("los ajustes del video añaden música que cubre todo el video y se conserva al editar", () => {
 		const sb = assembleStoryboard({
 			script,
@@ -291,6 +315,7 @@ describe("assembleStoryboard", () => {
 		});
 		expect(videoSettingsFromStoryboard(withMusic)).toEqual({
 			captions: { enabled: false, maxWordsPerPage: 3 },
+			visualStyle: { id: "libre", options: {} },
 			ctaText: "Más en el canal",
 			music,
 		});

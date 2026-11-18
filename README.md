@@ -3,7 +3,7 @@
 Estudio de escritorio para crear y gestionar canales de videos animados cortos: cada **proyecto es un
 canal** con su marca, sus videos, sus cuentas sociales y sus estadísticas.
 
-Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md) · [docs/07-exportar.md](docs/07-exportar.md)
+Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md) · [docs/07-exportar.md](docs/07-exportar.md) · [docs/08-estilos.md](docs/08-estilos.md)
 
 ## Estructura
 
@@ -56,3 +56,5 @@ pnpm --filter @frameflow/desktop dist   # instalador para este sistema (apps/des
 
 GPL-3.0 (ver `LICENSE`): eSpeak NG, que convierte el texto en fonemas para la voz, es GPL-3.0.
 Kokoro (modelo de voz) es Apache-2.0; Remotion tiene su propia licencia. Detalles en `docs/05-voz.md`.
+El estilo Holograma usa el motor de «hologram-hud» de [Lemo-Opuscar](https://github.com/lemomo-ai/lemo-opuscar)
+(Lemomo · LemoLab, código MIT; ver `docs/08-estilos.md`).

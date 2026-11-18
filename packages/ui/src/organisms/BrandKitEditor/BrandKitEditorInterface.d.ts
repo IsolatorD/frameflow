@@ -1,5 +1,9 @@
 import type { SelectOption } from "../../atoms/SelectField/SelectFieldInterface";
 import type { BrandPreviewTheme } from "../../molecules/BrandPreview/BrandPreviewInterface";
+import type {
+	VisualStyleChoice,
+	VisualStyleValue,
+} from "../../molecules/VisualStylePicker/VisualStylePickerInterface";
 
 export interface BrandVoiceDraft {
 	engine: "kokoro" | "recorded";
@@ -16,6 +20,8 @@ export interface BrandKitDraft {
 	captions: { enabled: boolean; maxWordsPerPage: number };
 	defaultHashtags: string[];
 	ctaText: string;
+	/** Estilo visual por defecto de los videos nuevos. */
+	visualStyle: VisualStyleValue;
 }
 
 export interface BrandKitEditorLanguage {
@@ -28,6 +34,8 @@ export interface BrandKitEditorProps {
 	value: BrandKitDraft;
 	languages: readonly BrandKitEditorLanguage[];
 	fontOptions: readonly SelectOption[];
+	/** Estilos visuales disponibles (catálogo). */
+	visualStyles: readonly VisualStyleChoice[];
 	speedRange: { min: number; max: number; step: number };
 	wordsPerPageRange: { min: number; max: number };
 	/** Convierte el texto libre de hashtags en la lista final. */

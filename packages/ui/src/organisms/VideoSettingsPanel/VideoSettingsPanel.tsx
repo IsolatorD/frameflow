@@ -4,6 +4,7 @@ import { RangeField } from "../../atoms/RangeField/RangeField";
 import { SwitchField } from "../../atoms/SwitchField/SwitchField";
 import { TextField } from "../../atoms/TextField/TextField";
 import { Section } from "../../molecules/Section/Section";
+import { VisualStylePicker } from "../../molecules/VisualStylePicker/VisualStylePicker";
 import type { VideoSettingsDraft, VideoSettingsPanelProps } from "./VideoSettingsPanelInterface";
 
 const percent = (v: number) => `${Math.round(v * 100)}%`;
@@ -21,6 +22,8 @@ export function VideoSettingsPanel({
 	saving = false,
 	serverError,
 	locked = false,
+	visualStyles,
+	projectStyleLabel,
 }: VideoSettingsPanelProps) {
 	const [draft, setDraft] = useState<VideoSettingsDraft>(value);
 	const [picking, setPicking] = useState(false);
@@ -55,6 +58,22 @@ export function VideoSettingsPanel({
 			className="flex flex-col gap-4"
 		>
 			<fieldset disabled={locked} className="flex flex-col gap-4">
+				<Section
+					title="Estilo visual"
+					description={
+						projectStyleLabel
+							? `El del proyecto es «${projectStyleLabel}»; aquí lo cambias solo para este video.`
+							: "Cómo se ven las escenas de este video."
+					}
+				>
+					<VisualStylePicker
+						idPrefix="video"
+						styles={visualStyles}
+						value={draft.visualStyle}
+						onChange={(visualStyle) => setDraft((d) => ({ ...d, visualStyle }))}
+						disabled={locked}
+					/>
+				</Section>
 				<Section title="Subtítulos">
 					<div className="flex flex-col gap-4">
 						<SwitchField

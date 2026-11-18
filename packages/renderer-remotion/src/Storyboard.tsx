@@ -6,6 +6,7 @@ import { AudioClipView } from "./clips/AudioClipView";
 import { MediaBaseContext } from "./clips/resolveSrc";
 import { VisualClipView } from "./clips/VisualClipView";
 import { fontFor } from "./fonts";
+import { stageFor } from "./looks";
 
 /**
  * Dibuja la línea de tiempo: cada pista es una capa (la última, encima) y cada clip
@@ -19,6 +20,8 @@ export type StoryboardProps = {
 
 export const Storyboard = ({ storyboard, mediaBaseUrl }: StoryboardProps) => {
 	const { fps, style } = storyboard;
+	// Estilo visual: si tiene escenario, dibuja las escenas él y las escenas planas no se pintan.
+	const stage = stageFor(style.visualStyle);
 	const at = (clip: { id: string; start: number; duration: number }) => ({
 		from: toFrames(clip.start, fps),
 		durationInFrames: Math.max(1, toFrames(clip.duration, fps)),
@@ -30,13 +33,16 @@ export const Storyboard = ({ storyboard, mediaBaseUrl }: StoryboardProps) => {
 			<AbsoluteFill
 				style={{ fontFamily: fontFor(style.fontFamily), backgroundColor: style.theme.background }}
 			>
+				{stage ? <stage.Stage storyboard={storyboard} options={stage.options} /> : null}
 				{storyboard.tracks.map((track) =>
 					track.hidden ? null : (
 						<AbsoluteFill key={track.id}>
 							{track.kind === "visual"
 								? track.clips.map((clip) => (
 										<Sequence key={clip.id} {...at(clip)} layout="none">
-											<VisualClipView clip={clip} theme={style.theme} />
+											{stage && clip.type === "scene" ? null : (
+												<VisualClipView clip={clip} theme={style.theme} />
+											)}
 										</Sequence>
 									))
 								: track.muted

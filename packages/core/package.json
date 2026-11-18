@@ -23,7 +23,8 @@
 		"./voice/phonemes": "./src/voice/phonemes.ts",
 		"./voice/timing": "./src/voice/timing.ts",
 		"./voice/kokoroModel": "./src/voice/kokoroModel.ts",
-		"./publish": "./src/publish/publish.ts"
+		"./publish": "./src/publish/publish.ts",
+		"./look": "./src/look/looks.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

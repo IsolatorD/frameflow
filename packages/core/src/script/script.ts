@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveVisualStyle, type VisualStyle, visualStyleSchema } from "../look/looks";
 import type { VideoFormat } from "../storyboard/scenes";
 import {
 	type AudioClip,
@@ -393,12 +394,15 @@ export const scriptFromStoryboard = (sb: Storyboard): Script => ({
 /** Ajustes del video que no son del guion: subtítulos, llamada a la acción y música. */
 export type VideoSettings = {
 	captions: VideoStyle["captions"];
+	/** Estilo visual del video; al aplicar, si falta se conserva el que tenga. */
+	visualStyle?: VisualStyle;
 	ctaText: string;
 	music: MusicSettings | null;
 };
 
 export const videoSettingsFromStoryboard = (sb: Storyboard): VideoSettings => ({
 	captions: { ...sb.style.captions },
+	visualStyle: resolveVisualStyle(sb.style.visualStyle),
 	ctaText: ctaOf(sb),
 	music: musicOf(sb),
 });
@@ -406,6 +410,8 @@ export const videoSettingsFromStoryboard = (sb: Storyboard): VideoSettings => ({
 export const videoSettingsSchema = z.object({
 	captions: z.object({ enabled: z.boolean(), maxWordsPerPage: z.number().int().min(1).max(8) }),
 	ctaText: z.string().trim().max(120),
+	/** Estilo visual del video (opcional: sin él se conserva el que tenga). */
+	visualStyle: visualStyleSchema.optional(),
 	music: z
 		.object({
 			src: z.string().min(1),
@@ -424,7 +430,13 @@ export const applyVideoSettings = (sb: Storyboard, input: VideoSettings): Storyb
 		script: scriptFromStoryboard(sb),
 		language: sb.language,
 		format: sb.format,
-		style: { ...sb.style, captions: settings.captions },
+		style: {
+			...sb.style,
+			captions: settings.captions,
+			visualStyle: settings.visualStyle
+				? resolveVisualStyle(settings.visualStyle)
+				: sb.style.visualStyle,
+		},
 		ctaText: settings.ctaText,
 		music: settings.music,
 		previous: sb,

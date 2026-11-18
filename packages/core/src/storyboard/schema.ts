@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { visualStyleSchema } from "../look/looks";
 import { formatSchema, sceneContentSchema, themeSchema, wordSchema } from "./scenes";
 
 // Storyboard v2: el contrato central de Frameflow.
@@ -172,6 +173,8 @@ export const trackSchema = z.discriminatedUnion("kind", [visualTrackSchema, audi
 /** Estilo del video: copia de la marca del canal en el momento de generarlo. */
 export const videoStyleSchema = z.object({
 	theme: themeSchema,
+	/** Estilo visual (preset) de las escenas; sin él (videos anteriores) se dibuja como "Libre". */
+	visualStyle: visualStyleSchema.optional(),
 	fontFamily: z.string().default("Montserrat"),
 	captions: z
 		.object({

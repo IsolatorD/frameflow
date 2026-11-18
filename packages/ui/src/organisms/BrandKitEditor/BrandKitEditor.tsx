@@ -7,6 +7,7 @@ import { SwitchField } from "../../atoms/SwitchField/SwitchField";
 import { TextField } from "../../atoms/TextField/TextField";
 import { BrandPreview } from "../../molecules/BrandPreview/BrandPreview";
 import { Section } from "../../molecules/Section/Section";
+import { VisualStylePicker } from "../../molecules/VisualStylePicker/VisualStylePicker";
 import {
 	COLOR_FIELDS,
 	colorErrors,
@@ -22,6 +23,7 @@ export function BrandKitEditor({
 	value,
 	languages,
 	fontOptions,
+	visualStyles,
 	speedRange,
 	wordsPerPageRange,
 	parseHashtags,
@@ -91,6 +93,18 @@ export function BrandKitEditor({
 							))}
 						</ul>
 					) : null}
+				</Section>
+
+				<Section
+					title="Estilo visual"
+					description="Cómo se ven las escenas de los videos nuevos. Cada video puede cambiarlo o dejarlo libre."
+				>
+					<VisualStylePicker
+						idPrefix="brand"
+						styles={visualStyles}
+						value={draft.visualStyle}
+						onChange={(style) => set("visualStyle", style)}
+					/>
 				</Section>
 
 				<Section title="Tipografía">
