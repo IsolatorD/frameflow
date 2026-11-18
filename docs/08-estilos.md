@@ -59,3 +59,40 @@ subtítulos van debajo). La cámara se ajusta al tamaño de cada modelo para que
 3. Añadirlo al catálogo `VISUAL_STYLES` (nombre, descripción, crédito, versión y opciones).
 4. Probar con fotogramas sueltos (`npx remotion still … --props`) en 9:16 y 16:9, y con la prueba de
    humo completa.
+
+## Cola de estilos por portar
+
+Elegidos por Daniel (2026-11-18) entre los ejemplos de [Lemo-Opuscar](https://github.com/lemomo-ai/lemo-opuscar).
+Se portan de uno en uno, cada uno como actualización de la app. Primero los dos que más encajan con
+"tips y datos curiosos"; el resto, en el orden que se decida.
+
+| #   | Estilo                    | Carpeta en el repo     | Encaja con                | Notas                                                                                                                     |
+| --- | ------------------------- | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Scale Zoom Explainer      | `flat-space-explainer` | Tips, datos curiosos      | Prioridad                                                                                                                 |
+| 2   | Pictogram Motion          | `pictogram-motion`     | Tips, datos curiosos      | Prioridad                                                                                                                 |
+| 3   | Ukiyo-e                   | `ukiyoe`               | Historias, cuentos        |                                                                                                                           |
+| 4   | Shadow Puppetry           | `shadow-puppet`        | Cuentos, leyendas         |                                                                                                                           |
+| 5   | Chinese Ink Wash          | `ink-wash`             | Historias, cuentos        |                                                                                                                           |
+| 6   | Marker on Paper           | `marker-paper`         | Explicaciones             |                                                                                                                           |
+| 7   | Sketchnote                | `sketchnote`           | Explicaciones, resúmenes  |                                                                                                                           |
+| 8   | Crayon Picture Book       | `crayon-book`          | Cuentos, público infantil |                                                                                                                           |
+| 9   | Watercolor Brush          | `watercolor`           | Historias, viajes         | Usa contornos de Natural Earth/world-atlas (ISC): incluir su licencia                                                     |
+| 10  | 1920s Newsreel            | `newsreel`             | Historia, noticias        | La demo usa material de archivo de terceros: se alimentaría con tus capas                                                 |
+| 11  | Caption News              | `caption-news`         | Noticias, datos           | La demo usa vídeos/fotos de terceros: se alimentaría con tus capas                                                        |
+| 12  | Archive Light Table       | `archive-lighttable`   | Historia, documentos      | La demo usa fotos de terceros: se alimentaría con tus capas                                                               |
+| 13  | Paper Pop-up Book         | `paper-popup`          | Cuentos                   |                                                                                                                           |
+| 14  | Brick Toy                 | `brick-toy`            | Explicaciones, infantil   | Como "bloques de juguete" genéricos: sin nombres ni logos de marcas                                                       |
+| 15  | Mascot Screencast         | `living-screencast`    | Tutoriales                | Su mascota (Clawd) y la interfaz que dibuja son de Anthropic, sin licencia: portar con otra mascota (p. ej. la del canal) |
+| 16  | Scratch Film              | `scratch-film`         | Datos, ritmo rápido       |                                                                                                                           |
+| 17  | 1920s Silent Film         | `silent-film`          | Historia, humor           | Revisar si la demo usa material de archivo                                                                                |
+| 18  | Microgame Frenzy          | `microgame`            | Retos, datos curiosos     |                                                                                                                           |
+| 19  | Comic History Cartoon     | `comic-history`        | Historia                  |                                                                                                                           |
+| 20  | Manga Panels              | `manga-panels`         | Historias                 |                                                                                                                           |
+| 21  | 1930s Rubber Hose Cartoon | `rubber-hose`          | Humor, cuentos            |                                                                                                                           |
+| 22  | Mid-century Cartoon       | `midcentury-toon`      | Explicaciones             |                                                                                                                           |
+| 23  | Instruction Manual Art    | `instruction-manual`   | Tutoriales, cómo funciona |                                                                                                                           |
+| 24  | Blueprint                 | `blueprint`            | Cómo funciona, ingeniería |                                                                                                                           |
+| 25  | Text Flash Cuts           | `text-flash-cuts`      | Datos, frases             |                                                                                                                           |
+
+En todos se porta solo el **código** (MIT). Nunca se incluyen sus `STYLE.md` ni demás documentación
+(CC BY-NC), y se revisa en el `REUSE.toml` de cada estilo si hay material de terceros.

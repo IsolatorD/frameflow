@@ -3,7 +3,7 @@
 Estudio de escritorio para crear y gestionar canales de videos animados cortos: cada **proyecto es un
 canal** con su marca, sus videos, sus cuentas sociales y sus estadísticas.
 
-Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md) · [docs/07-exportar.md](docs/07-exportar.md) · [docs/08-estilos.md](docs/08-estilos.md)
+Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md) · [docs/07-exportar.md](docs/07-exportar.md) · [docs/08-estilos.md](docs/08-estilos.md) · [docs/09-voz-grabada.md](docs/09-voz-grabada.md)
 
 ## Estructura
 
@@ -46,6 +46,9 @@ pnpm --filter @frameflow/desktop dist   # instalador para este sistema (apps/des
 
 - **Voz:** nada que instalar. Kokoro corre dentro de la app (Node + ONNX Runtime); la primera vez
   descarga su modelo (92 MB) y lo verifica. Ver `docs/05-voz.md`.
+- **Voz grabada (opcional):** tu propia voz, escena por escena, con el micrófono o importando un
+  audio. La primera vez descarga Whisper (77 MB) para sincronizar los subtítulos. Ver
+  `docs/09-voz-grabada.md`.
 - **Modo automático (IA):** se elige en **Ajustes**: Ollama en este equipo (Qwen3 8B o 14B; si no
   tienes Ollama, la app lo descarga con un clic) o
   Claude, OpenAI o Gemini con tu clave de API (ver `docs/04-guion-ia.md`). Por defecto usa el modelo local recomendado para el

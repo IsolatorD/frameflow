@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import type { ConfiguredLlm } from "@frameflow/core/ai/providers";
 import type { ProjectWithBrand } from "@frameflow/core/project";
@@ -32,10 +32,18 @@ import {
 	type VideoDetail,
 	type VideoStatus,
 } from "@frameflow/core/video";
+import {
+	alignWords,
+	normalizeVolume,
+	resample,
+	trimSilence,
+} from "@frameflow/core/voice/recording";
+import { WHISPER_SAMPLE_RATE } from "@frameflow/core/voice/whisperModel";
 import type { ProjectsRepository } from "@frameflow/db/projects";
 import type { VideosRepository } from "@frameflow/db/videos";
 import { type RemotionSource, renderStoryboard } from "./render";
-import type { VoiceEngine } from "./voice/kokoro";
+import { encodeWav, type VoiceEngine } from "./voice/kokoro";
+import type { Whisper } from "./voice/whisper";
 
 type Deps = {
 	projects: ProjectsRepository;
@@ -46,12 +54,17 @@ type Deps = {
 	dataDir: string;
 	/** Voz (Kokoro en Node). */
 	voice: VoiceEngine;
+	/** Tiempos por palabra de la voz grabada. */
+	whisper: Whisper;
 	/** Composición de Remotion: código (desarrollo) o ya empaquetada (app instalada). */
 	remotion: RemotionSource;
 	/** URL del servidor de medios que sirve <dataDir>. */
 	mediaBaseUrl: string;
 	emit: (event: JobEvent) => void;
 };
+
+/** Frecuencia de las voces guardadas (la misma que Kokoro). */
+const RECORDING_RATE = 24_000;
 
 /** Tras editar: con todas las voces al día se puede renderizar; si no, falta generar voz. */
 const statusAfterEdit = (sb: Storyboard): VideoStatus =>
@@ -186,6 +199,10 @@ export function createVideoPipeline(deps: Deps) {
 		await deps.videos.setStatus(video.id, "voicing");
 		const voice = project.brandKit.voices[video.language];
 		if (!voice) throw new Error(`La marca no tiene voz para el idioma ${video.language}`);
+		if (voice.engine === "recorded")
+			throw new Error(
+				"Este canal usa tu voz grabada: graba las escenas que faltan desde «Guion y escenas».",
+			);
 		const relDir = join("videos", video.id, "voice");
 		progress(
 			null,
@@ -308,6 +325,8 @@ export function createVideoPipeline(deps: Deps) {
 				// Automático: guion → voz → video, sin pararse a revisar.
 				runJob(video.id, "script", async (signal, progress) => {
 					const scripted = await writeScript(video, project, signal, progress);
+					// Con voz grabada, el guion queda listo para que lo grabes tú.
+					if (project.brandKit.voices[video.language]?.engine === "recorded") return;
 					const voiced = await makeVoice(scripted, project, signal, progress);
 					await makeRender(voiced, project, signal, progress);
 				});
@@ -437,6 +456,68 @@ export function createVideoPipeline(deps: Deps) {
 			runJob(videoId, "voice", (signal, progress) =>
 				makeVoice(video, project, signal, progress).then(() => undefined),
 			);
+		},
+
+		/**
+		 * Voz grabada de una escena: se limpia (silencios, volumen), se guarda como WAV y Whisper dice
+		 * cuándo se pronuncia cada palabra del guion (para los subtítulos). Solo cambia esa escena.
+		 */
+		async recordVoice(
+			videoId: string,
+			sceneId: string,
+			pcm: Float32Array,
+			sampleRate: number,
+		): Promise<void> {
+			const video = await loadVideo(videoId);
+			const project = await loadProject(video.projectId);
+			const scene = scriptFromStoryboard(video.storyboard).scenes.find((s) => s.id === sceneId);
+			if (!scene) throw new Error("Esa escena ya no existe; guarda el guion y vuelve a grabar.");
+			runJob(videoId, "voice", async (signal, progress) => {
+				progress(null, "Limpiando la grabación…");
+				const clean = normalizeVolume(
+					trimSilence(resample(pcm, sampleRate, RECORDING_RATE), RECORDING_RATE),
+				);
+				if (clean.length < RECORDING_RATE * 0.3)
+					throw new Error(
+						"No se oye la voz en la grabación. Revisa el micrófono y vuelve a grabar.",
+					);
+				if (!deps.whisper.modelReady())
+					progress(null, "Descargando el modelo de subtítulos (solo la primera vez)…");
+				await deps.whisper.ensureModel(signal, ({ done, total }) =>
+					progress(
+						total ? done / total : null,
+						`Descargando el modelo de subtítulos (solo la primera vez): ${formatMb(done)}${total ? ` de ${formatMb(total)}` : ""}`,
+					),
+				);
+				progress(null, "Sincronizando los subtítulos con tu voz…");
+				const seconds = clean.length / RECORDING_RATE;
+				const heard = await deps.whisper.transcribe(
+					resample(clean, RECORDING_RATE, WHISPER_SAMPLE_RATE),
+					video.language,
+				);
+				signal.throwIfAborted();
+				const relDir = join("videos", video.id, "voice");
+				const dir = join(projectDir(project), relDir);
+				mkdirSync(dir, { recursive: true });
+				const file = `rec-${sceneId}-${Date.now().toString(36)}.wav`;
+				writeFileSync(join(dir, file), encodeWav(clean, RECORDING_RATE));
+				const current = await loadVideo(videoId);
+				const sb = assembleStoryboard({
+					script: scriptFromStoryboard(current.storyboard),
+					language: current.language,
+					format: current.format,
+					style: current.storyboard.style,
+					voices: {
+						[sceneId]: {
+							src: `${relDir}/${file}`,
+							duration: Math.round(seconds * 1000) / 1000,
+							words: alignWords(scene.narration, heard, seconds),
+						},
+					},
+					previous: current.storyboard,
+				});
+				await deps.videos.saveVersion(videoId, sb, "voice", statusAfterEdit(sb));
+			});
 		},
 
 		async render(videoId: string): Promise<void> {

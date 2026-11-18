@@ -20,6 +20,10 @@ export interface ScriptEditorProps {
 	extraTimeRange: { min: number; max: number; step: number };
 	/** Ids de escenas con la voz al día; undefined = no mostrar el estado de voz. */
 	voicedSceneIds?: readonly string[];
+	/** Escenas cuya voz al día es una grabación. */
+	recordedSceneIds?: readonly string[];
+	/** Grabar la voz de una escena guardada; sin él no se muestra el botón. */
+	onRecordScene?: (sceneId: string) => void;
 	/** Escena a resaltar y mostrar (p. ej. al pulsarla en la línea de tiempo). */
 	focusSceneId?: string | null;
 }

@@ -1,4 +1,4 @@
-import { isFullyVoiced, voicedSceneIds } from "@frameflow/core/script";
+import { isFullyVoiced, recordedSceneIds, voicedSceneIds } from "@frameflow/core/script";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import { storyboardSchema } from "@frameflow/core/storyboard";
 import { storyboardDuration } from "@frameflow/core/storyboard/timeline";
@@ -143,6 +143,7 @@ export const createVideosRepository = (db: Database) => {
 				storyboard: version.storyboard,
 				render: renderInfo,
 				voicedSceneIds: [...voicedSceneIds(version.storyboard)],
+				recordedSceneIds: [...recordedSceneIds(version.storyboard)],
 			};
 		},
 

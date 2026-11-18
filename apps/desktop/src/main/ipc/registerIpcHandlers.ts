@@ -184,6 +184,17 @@ export function registerIpcHandlers(deps: {
 	ipcMain.handle(IPC.videosGenerateVoice, (_e, id: unknown) =>
 		wrap(() => pipeline.generateVoice(uuid(id))),
 	);
+	ipcMain.handle(
+		IPC.videosRecordVoice,
+		(_e, id: unknown, sceneId: unknown, pcm: unknown, sampleRate: unknown) =>
+			wrap(() => {
+				if (!(pcm instanceof Float32Array)) throw new Error("Grabación no válida");
+				const rate = z.number().int().min(8000).max(192_000).parse(sampleRate);
+				if (pcm.length > rate * 180)
+					throw new Error("La grabación de una escena admite hasta 3 minutos.");
+				return pipeline.recordVoice(uuid(id), z.string().min(1).parse(sceneId), pcm, rate);
+			}),
+	);
 	ipcMain.handle(IPC.videosRender, (_e, id: unknown) => wrap(() => pipeline.render(uuid(id))));
 	ipcMain.handle(IPC.videosCancel, (_e, id: unknown) => wrap(() => pipeline.cancel(uuid(id))));
 	ipcMain.handle(IPC.videosOpenRender, (_e, id: unknown, how: unknown) =>

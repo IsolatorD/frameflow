@@ -123,23 +123,45 @@ export function BrandKitEditor({
 						{languages.map((language) => {
 							const voice = draft.voices[language.code];
 							if (!voice) return null;
+							const recorded = voice.engine === "recorded";
 							return (
-								<div key={language.code} className="grid grid-cols-2 gap-4">
+								<div key={language.code} className="flex flex-col gap-3">
 									<SelectField
-										id={`brand-voice-${language.code}`}
-										label={`Voz en ${language.label.toLowerCase()}`}
-										value={voice.voiceId}
-										options={language.voiceOptions}
-										onChange={(voiceId) => setVoice(language.code, { voiceId })}
+										id={`brand-engine-${language.code}`}
+										label={`Narración en ${language.label.toLowerCase()}`}
+										value={voice.engine}
+										options={[
+											{ value: "kokoro", label: "Voz sintética (se genera sola)" },
+											{ value: "recorded", label: "Mi voz (la grabo yo)" },
+										]}
+										onChange={(engine) =>
+											setVoice(language.code, { engine: engine as "kokoro" | "recorded" })
+										}
+										hint={
+											recorded
+												? "Cada escena se graba desde el guion («Grabar»). Si una escena no tiene voz, el video no se puede crear."
+												: undefined
+										}
 									/>
-									<RangeField
-										id={`brand-speed-${language.code}`}
-										label="Velocidad"
-										value={voice.speed}
-										{...speedRange}
-										format={formatSpeed}
-										onChange={(speed) => setVoice(language.code, { speed })}
-									/>
+									{recorded ? null : (
+										<div className="grid grid-cols-2 gap-4">
+											<SelectField
+												id={`brand-voice-${language.code}`}
+												label={`Voz en ${language.label.toLowerCase()}`}
+												value={voice.voiceId}
+												options={language.voiceOptions}
+												onChange={(voiceId) => setVoice(language.code, { voiceId })}
+											/>
+											<RangeField
+												id={`brand-speed-${language.code}`}
+												label="Velocidad"
+												value={voice.speed}
+												{...speedRange}
+												format={formatSpeed}
+												onChange={(speed) => setVoice(language.code, { speed })}
+											/>
+										</div>
+									)}
 								</div>
 							);
 						})}

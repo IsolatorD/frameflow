@@ -111,6 +111,7 @@ const app = await electron.launch({
 		...(fakeOllama ? { OLLAMA_URL: fakeOllama.url } : {}),
 		...(realRuntime ? { FRAMEFLOW_IGNORE_SYSTEM_OLLAMA: "1" } : {}),
 		FRAMEFLOW_UPDATE_URL: fakeUpdates.url,
+		FRAMEFLOW_FAKE_MIC: "1",
 	},
 });
 const errors = [];
@@ -508,6 +509,19 @@ try {
 	await page.screenshot({ path: join(shots, "11d-capas.png") });
 	await page.getByRole("tab", { name: /Guion y escenas/ }).click();
 
+	// Voz grabada (micrófono simulado: un tono): grabar, escuchar la toma y cerrar sin usarla.
+	await page.getByRole("button", { name: "Grabar la voz de la escena 1" }).click();
+	const recordDialog = page.getByRole("dialog", { name: "Grabar la voz de la escena 1" });
+	await recordDialog.getByRole("button", { name: "Grabar", exact: true }).click();
+	await recordDialog.getByRole("button", { name: "Detener" }).waitFor();
+	await page.waitForTimeout(1500);
+	await recordDialog.getByRole("button", { name: "Detener" }).click();
+	await recordDialog.getByRole("button", { name: "Usar esta toma" }).waitFor();
+	expect((await recordDialog.locator("audio").count()) === 1, "Debería poder escucharse la toma");
+	await page.screenshot({ path: join(shots, "11c-grabar-voz.png") });
+	await page.keyboard.press("Escape");
+	await recordDialog.waitFor({ state: "detached" });
+
 	// Publicar: sin MP4 todavía, la pestaña explica qué falta.
 	await page.getByRole("tab", { name: "Publicar" }).click();
 	await page.getByText("Primero crea el video").waitFor();
@@ -515,8 +529,21 @@ try {
 
 	// Prueba completa (voz real con Kokoro + render MP4): solo con SMOKE_FULL=1, tarda minutos.
 	if (process.env.SMOKE_FULL) {
-		await page.getByRole("button", { name: "Generar voz" }).click();
+		// Voz grabada en la escena 1 (con Whisper real); el resto, sintética: se combinan.
+		await page.getByRole("button", { name: "Grabar la voz de la escena 1" }).click();
+		const take = page.getByRole("dialog", { name: "Grabar la voz de la escena 1" });
+		await take.getByRole("button", { name: "Grabar", exact: true }).click();
+		await page.waitForTimeout(2000);
+		await take.getByRole("button", { name: "Detener" }).click();
+		await take.getByRole("button", { name: "Usar esta toma" }).click();
+		await take.waitFor({ state: "detached", timeout: 30_000 });
+		await page.getByText("Voz grabada", { exact: true }).waitFor({ timeout: 900_000 });
+		await page.getByRole("button", { name: /^Generar voz/ }).click();
 		await page.getByText("Voz al día en todas las escenas").waitFor({ timeout: 600_000 });
+		expect(
+			(await page.getByText("Voz grabada", { exact: true }).count()) === 1,
+			"La escena 1 debería conservar su voz grabada",
+		);
 
 		// Cambiar una escena solo invalida su voz: las demás se conservan.
 		await page

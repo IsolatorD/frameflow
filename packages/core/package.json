@@ -24,7 +24,9 @@
 		"./voice/timing": "./src/voice/timing.ts",
 		"./voice/kokoroModel": "./src/voice/kokoroModel.ts",
 		"./publish": "./src/publish/publish.ts",
-		"./look": "./src/look/looks.ts"
+		"./look": "./src/look/looks.ts",
+		"./voice/recording": "./src/voice/recording.ts",
+		"./voice/whisperModel": "./src/voice/whisperModel.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

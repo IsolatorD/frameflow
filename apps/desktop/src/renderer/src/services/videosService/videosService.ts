@@ -31,6 +31,12 @@ export const videosService = {
 	pickMusic: (id: string): Promise<MusicSettings | null> =>
 		unwrap(window.frameflow.videos.pickMusic(id)),
 	generateVoice: (id: string): Promise<void> => unwrap(window.frameflow.videos.generateVoice(id)),
+	recordVoice: (
+		id: string,
+		sceneId: string,
+		pcm: Float32Array,
+		sampleRate: number,
+	): Promise<void> => unwrap(window.frameflow.videos.recordVoice(id, sceneId, pcm, sampleRate)),
 	render: (id: string): Promise<void> => unwrap(window.frameflow.videos.render(id)),
 	cancel: (id: string): Promise<void> => unwrap(window.frameflow.videos.cancel(id)),
 	openRender: (id: string, how: "open" | "reveal"): Promise<void> =>

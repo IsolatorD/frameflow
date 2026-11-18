@@ -5,7 +5,7 @@ import { DatabaseFromNewerVersionError, openDatabase } from "@frameflow/db/clien
 import { createProjectsRepository } from "@frameflow/db/projects";
 import { createPublicationsRepository } from "@frameflow/db/publications";
 import { createVideosRepository } from "@frameflow/db/videos";
-import { app, BrowserWindow, dialog, shell } from "electron";
+import { app, BrowserWindow, dialog, session, shell } from "electron";
 import { IPC } from "../shared/api";
 import { registerIpcHandlers } from "./ipc/registerIpcHandlers";
 import { createAiSettingsStore } from "./services/aiSettings";
@@ -15,6 +15,7 @@ import { createPublisher } from "./services/publish";
 import { createUpdates } from "./services/updates";
 import { createVideoPipeline } from "./services/videoPipeline";
 import { createVoiceEngine } from "./services/voice/kokoro";
+import { createWhisper } from "./services/voice/whisper";
 
 // Carpeta de datos del usuario (BD + proyectos). FRAMEFLOW_HOME permite aislarla (tests, pruebas).
 const dataDir = process.env.FRAMEFLOW_HOME ?? join(homedir(), "Frameflow");
@@ -78,7 +79,27 @@ function createWindow(): void {
 	}
 }
 
+// Micrófono simulado (pruebas automáticas): Chromium genera un tono en lugar de pedir el micro real.
+if (process.env.FRAMEFLOW_FAKE_MIC === "1") {
+	app.commandLine.appendSwitch("use-fake-device-for-media-stream");
+	app.commandLine.appendSwitch("use-fake-ui-for-media-stream");
+}
+
+/** La app solo pide el micrófono (voz grabada); nada de cámara, pantalla u otros permisos. */
+function allowMicrophoneOnly() {
+	const audioOnly = (permission: string, mediaTypes?: readonly string[]) =>
+		permission === "media" && (mediaTypes ?? []).every((t) => t === "audio");
+	session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) =>
+		callback(audioOnly(permission, (details as { mediaTypes?: string[] }).mediaTypes)),
+	);
+	session.defaultSession.setPermissionCheckHandler(
+		(_wc, permission, _origin, details) =>
+			permission === "media" && (details as { mediaType?: string }).mediaType !== "video",
+	);
+}
+
 app.whenReady().then(async () => {
+	allowMicrophoneOnly();
 	// En desarrollo macOS mostraría el icono de Electron: se pone el de Frameflow.
 	if (process.platform === "darwin" && !app.isPackaged) app.dock?.setIcon(appIcon);
 	mkdirSync(dataDir, { recursive: true });
@@ -127,6 +148,7 @@ app.whenReady().then(async () => {
 		videos,
 		llm: () => ai.current(),
 		dataDir,
+		whisper: createWhisper({ dataDir }),
 		voice: createVoiceEngine({
 			dataDir,
 			espeakScript: unpacked(join(import.meta.dirname, "espeak-process.js")),

@@ -160,6 +160,14 @@ const ctaTimingOf = (sb: Storyboard | undefined) => {
 };
 
 /** Ids de las escenas que tienen la voz al día. */
+/** Escenas cuya voz al día es una grabación del usuario (archivos "rec-…"). */
+export const recordedSceneIds = (sb: Storyboard): Set<string> =>
+	new Set(
+		sceneClips(sb)
+			.filter((c) => /(^|\/)rec-[^/]*$/.test(currentVoice(sb, c.id, c.narration ?? "")?.src ?? ""))
+			.map((c) => c.id),
+	);
+
 export const voicedSceneIds = (sb: Storyboard): Set<string> =>
 	new Set(
 		sceneClips(sb)

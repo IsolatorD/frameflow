@@ -69,6 +69,8 @@ export type VideoDetail = VideoSummary & {
 	render: RenderInfo | null;
 	/** Escenas cuya voz está al día (las demás se generarán en el próximo "Generar voz"). */
 	voicedSceneIds: string[];
+	/** Escenas cuya voz al día es una grabación tuya (no sintética). */
+	recordedSceneIds: string[];
 };
 
 /** Progreso de una tarea larga (guion, voz, render), que el proceso principal emite a la interfaz. */

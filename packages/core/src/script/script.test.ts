@@ -6,6 +6,7 @@ import {
 	assembleStoryboard,
 	estimateSeconds,
 	isFullyVoiced,
+	recordedSceneIds,
 	scriptFromStoryboard,
 	starterScript,
 	videoSettingsFromStoryboard,
@@ -341,5 +342,42 @@ describe("assembleStoryboard", () => {
 				applyVideoSettings(longer, { ...videoSettingsFromStoryboard(longer), music: null }),
 			).music,
 		).toBeNull();
+	});
+});
+
+describe("voz grabada", () => {
+	it("distingue las escenas con voz grabada de las sintéticas", () => {
+		const style = {
+			theme: { background: "#000000", text: "#FFFFFF", accent: "#FAC775", muted: "#888888" },
+			fontFamily: "Montserrat",
+			captions: { enabled: true, maxWordsPerPage: 4 },
+		};
+		const draft = assembleStoryboard({
+			script: starterScript("luz"),
+			language: "es",
+			format: "9:16",
+			style,
+		});
+		const ids = scriptFromStoryboard(draft).scenes.map((s) => s.id as string);
+		const voiceFor = (id: string, src: string) => {
+			const scene = scriptFromStoryboard(draft).scenes.find((s) => s.id === id);
+			const words = (scene?.narration ?? "")
+				.split(" ")
+				.map((text, i) => ({ text, start: i * 0.2, end: i * 0.2 + 0.2 }));
+			return { src, duration: 3, words };
+		};
+		const sb = assembleStoryboard({
+			script: scriptFromStoryboard(draft),
+			language: "es",
+			format: "9:16",
+			style,
+			voices: {
+				[ids[0] as string]: voiceFor(ids[0] as string, "videos/v/voice/rec-a-1.wav"),
+				[ids[1] as string]: voiceFor(ids[1] as string, "videos/v/voice/abc123.wav"),
+			},
+			previous: draft,
+		});
+		expect([...recordedSceneIds(sb)]).toEqual([ids[0]]);
+		expect(voicedSceneIds(sb).has(ids[1] as string)).toBe(true);
 	});
 });

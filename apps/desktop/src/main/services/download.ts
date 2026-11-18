@@ -54,3 +54,38 @@ export async function sha256(file: string): Promise<string> {
 	await pipeline(createReadStream(file), hash);
 	return hash.digest("hex");
 }
+
+/**
+ * Descarga (si falta) y verifica un archivo de modelo: reintenta ante cortes de red y, si el hash no
+ * coincide, lo borra. Un ".ok" junto al archivo recuerda que ya se verificó (no se vuelve a calcular).
+ */
+export async function ensureVerifiedFile(opts: {
+	url: string;
+	dest: string;
+	sha256: string;
+	signal?: AbortSignal;
+	onProgress?: (progress: Progress) => void;
+}): Promise<string> {
+	const { mkdirSync, readFileSync, rmSync, writeFileSync } = await import("node:fs");
+	const { dirname } = await import("node:path");
+	const ok = `${opts.dest}.ok`;
+	if (existsSync(opts.dest) && existsSync(ok) && readFileSync(ok, "utf8").trim() === opts.sha256)
+		return opts.dest;
+	mkdirSync(dirname(opts.dest), { recursive: true });
+	const signal = opts.signal ?? new AbortController().signal;
+	for (let attempt = 1; ; attempt++) {
+		try {
+			await downloadFile(opts.url, opts.dest, { signal, onProgress: (p) => opts.onProgress?.(p) });
+			break;
+		} catch (error) {
+			if (signal.aborted || attempt >= 5 || !(error instanceof TypeError)) throw error;
+			await new Promise((r) => setTimeout(r, 3000));
+		}
+	}
+	if ((await sha256(opts.dest)) !== opts.sha256) {
+		rmSync(opts.dest, { force: true });
+		throw new Error("La descarga está dañada (se ha borrado). Vuelve a intentarlo.");
+	}
+	writeFileSync(ok, `${opts.sha256}\n`);
+	return opts.dest;
+}

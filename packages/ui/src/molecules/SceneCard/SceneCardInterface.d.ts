@@ -45,6 +45,12 @@ export interface SceneCardProps {
 	extraTimeRange: { min: number; max: number; step: number };
 	/** false = la voz de esta escena falta o quedó desactualizada; undefined = no mostrar. */
 	voiced?: boolean;
+	/** La voz al día de esta escena es una grabación tuya. */
+	recorded?: boolean;
+	/** Abre la grabación de la voz de esta escena; sin él no se muestra el botón. */
+	onRecord?: () => void;
+	/** Por qué no se puede grabar ahora (p. ej. hay cambios sin guardar). */
+	recordDisabledReason?: string;
 	/** Escena seleccionada desde la línea de tiempo. */
 	highlighted?: boolean;
 }

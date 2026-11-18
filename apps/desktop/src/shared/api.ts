@@ -84,6 +84,13 @@ export type FrameflowApi = {
 		/** Abre el selector de archivos y copia la música al proyecto; null si se cancela. */
 		pickMusic(id: string): Promise<IpcResult<MusicSettings | null>>;
 		generateVoice(id: string): Promise<IpcResult<void>>;
+		/** Voz grabada de una escena (audio mono en Float32 y su frecuencia). Va como tarea "voice". */
+		recordVoice(
+			id: string,
+			sceneId: string,
+			pcm: Float32Array,
+			sampleRate: number,
+		): Promise<IpcResult<void>>;
 		render(id: string): Promise<IpcResult<void>>;
 		cancel(id: string): Promise<IpcResult<void>>;
 		/** Abre el último MP4 en el reproductor del sistema, o lo muestra en el Finder. */
@@ -150,6 +157,7 @@ export const IPC = {
 	videosPickMedia: "videos:pick-media",
 	videosPickMusic: "videos:pick-music",
 	videosGenerateVoice: "videos:generate-voice",
+	videosRecordVoice: "videos:record-voice",
 	videosRender: "videos:render",
 	videosCancel: "videos:cancel",
 	videosOpenRender: "videos:open-render",

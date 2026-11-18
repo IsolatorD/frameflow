@@ -34,6 +34,8 @@ publish:
   releaseType: draft
 mac:
   category: public.app-category.video
+  extendInfo:
+    NSMicrophoneUsageDescription: Frameflow usa el micrófono para grabar tu voz en los videos.
   icon: build/icon.icns
   target:
     - target: dmg

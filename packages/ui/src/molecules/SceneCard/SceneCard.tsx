@@ -20,6 +20,9 @@ export function SceneCard({
 	defaultTheme,
 	extraTimeRange,
 	voiced,
+	recorded,
+	onRecord,
+	recordDisabledReason,
 	highlighted = false,
 }: SceneCardProps) {
 	const setContent = (content: SceneContentDraft) => onChange({ ...scene, content });
@@ -42,8 +45,21 @@ export function SceneCard({
 					Escena {index + 1}
 					<span className="text-xs font-normal text-zinc-500">≈ {estimate}</span>
 					{voiced === false ? <Badge tone="warning">Sin voz</Badge> : null}
+					{recorded ? <Badge tone="info">Voz grabada</Badge> : null}
 				</span>
 				<div className="flex gap-1">
+					{onRecord ? (
+						<Button
+							variant="ghost"
+							aria-label={`Grabar la voz de la escena ${index + 1}`}
+							title={recordDisabledReason ?? "Grabar tu voz para esta escena"}
+							disabled={disabled || Boolean(recordDisabledReason)}
+							onClick={onRecord}
+							className="px-2"
+						>
+							🎙 Grabar
+						</Button>
+					) : null}
 					<Button
 						variant="ghost"
 						aria-label={`Subir escena ${index + 1}`}

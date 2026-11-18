@@ -22,6 +22,8 @@ export function ScriptEditor({
 	extraTimeRange,
 	voicedSceneIds,
 	focusSceneId,
+	recordedSceneIds,
+	onRecordScene,
 }: ScriptEditorProps) {
 	const nextKey = useRef(0);
 	const keyed = (scenes: ScriptSceneDraft[]): Keyed[] =>
@@ -115,6 +117,11 @@ export function ScriptEditor({
 							: Boolean(scene.id && voicedSceneIds.includes(scene.id))
 					}
 					highlighted={Boolean(focusSceneId && scene.id === focusSceneId)}
+					recorded={Boolean(scene.id && recordedSceneIds?.includes(scene.id))}
+					onRecord={onRecordScene && scene.id ? () => onRecordScene(scene.id as string) : undefined}
+					recordDisabledReason={
+						dirty ? "Guarda el guion antes de grabar (se graba el texto guardado)." : undefined
+					}
 				/>
 			))}
 			<Button

@@ -56,6 +56,7 @@ import {
 } from "./OverlaysSection/OverlaysSection.constants";
 import { PreviewOverlayEditor } from "./PreviewOverlayEditor/PreviewOverlayEditor";
 import { PublishSection } from "./PublishSection/PublishSection";
+import { RecordVoiceDialog } from "./RecordVoiceDialog/RecordVoiceDialog";
 import { StoryboardPreview } from "./StoryboardPreview/StoryboardPreview";
 import {
 	BUSY_MESSAGE,
@@ -88,6 +89,8 @@ export function VideoPage() {
 	const dirty = scriptDirty || settingsDirty || captionsDirty || overlayDraft !== null;
 	const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
 	const blocker = useBlocker(dirty);
+	// Escena cuya voz se está grabando (diálogo abierto) o null.
+	const [recordingSceneId, setRecordingSceneId] = useState<string | null>(null);
 	const [tab, setTab] = useState<"script" | "settings" | "captions" | "layers" | "publish">(
 		"script",
 	);
@@ -248,10 +251,16 @@ export function VideoPage() {
 
 	const data = video.data;
 	const busy = isBusy(data);
+	// El canal usa voz grabada en este idioma: siempre se muestra qué escenas faltan por grabar.
+	const recordsVoice = project.data?.brandKit.voices[data.language]?.engine === "recorded";
+	const recordingIndex = script?.scenes.findIndex((s) => s.id === recordingSceneId) ?? -1;
+	const recordingScene = recordingIndex >= 0 ? script?.scenes[recordingIndex] : undefined;
+	const missingVoices = (script?.scenes.length ?? 0) - data.voicedSceneIds.length;
 	const status = VIDEO_STATUS[data.status];
 	const running = busy && job?.state === "running" ? job : null;
 	const actionError =
 		actions.generateVoice.error?.message ??
+		actions.recordVoice.error?.message ??
 		actions.render.error?.message ??
 		actions.openRender.error?.message ??
 		actions.editTimeline.error?.message ??
@@ -365,7 +374,11 @@ export function VideoPage() {
 									}
 									defaultTheme={data.storyboard.style.theme}
 									extraTimeRange={EXTRA_TIME_RANGE}
-									voicedSceneIds={data.voicedSceneIds.length > 0 ? data.voicedSceneIds : undefined}
+									voicedSceneIds={
+										data.voicedSceneIds.length > 0 || recordsVoice ? data.voicedSceneIds : undefined
+									}
+									recordedSceneIds={data.recordedSceneIds}
+									onRecordScene={setRecordingSceneId}
 									focusSceneId={focusSceneId}
 								/>
 							</div>
@@ -603,6 +616,11 @@ export function VideoPage() {
 										) : null}
 										{data.hasVoice ? (
 											<p className="text-xs text-emerald-300">✓ Voz al día en todas las escenas</p>
+										) : recordsVoice ? (
+											<p className="text-xs text-zinc-400">
+												🎙 Faltan {missingVoices} {missingVoices === 1 ? "escena" : "escenas"} por
+												grabar: usa «Grabar» en cada escena.
+											</p>
 										) : (
 											<Button
 												disabled={dirty}
@@ -656,6 +674,25 @@ export function VideoPage() {
 					</aside>
 				</div>
 			</div>
+			{recordingScene?.id ? (
+				<RecordVoiceDialog
+					index={recordingIndex}
+					narration={recordingScene.narration}
+					estimate={`${estimateSeconds(recordingScene.narration).toFixed(1).replace(".", ",")} s`}
+					onUse={(take) =>
+						actions.recordVoice.mutate(
+							{ sceneId: recordingScene.id as string, ...take },
+							{ onSuccess: () => setRecordingSceneId(null) },
+						)
+					}
+					onClose={() => {
+						actions.recordVoice.reset();
+						setRecordingSceneId(null);
+					}}
+					using={actions.recordVoice.isPending}
+					error={actions.recordVoice.error?.message}
+				/>
+			) : null}
 			{blocker.state === "blocked" ? (
 				<Dialog
 					title="Tienes cambios sin guardar"
