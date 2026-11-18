@@ -16,10 +16,11 @@ la música y la llamada a la acción funcionan igual con cualquiera.
 
 ## Catálogo
 
-| Estilo    | Desde | Opciones                                          | Origen                                        |
-| --------- | ----- | ------------------------------------------------- | --------------------------------------------- |
-| Libre     | 0.1.0 | —                                                 | Frameflow                                     |
-| Holograma | 0.2.0 | Modelo 3D: planeta, con anillos, satélite, cohete | «hologram-hud» de Lemo-Opuscar (MIT), portado |
+| Estilo          | Desde | Opciones                                                   | Origen                                               |
+| --------------- | ----- | ---------------------------------------------------------- | ---------------------------------------------------- |
+| Libre           | 0.1.0 | —                                                          | Frameflow                                            |
+| Holograma       | 0.2.0 | Modelo 3D: planeta, con anillos, satélite, cohete          | «hologram-hud» de Lemo-Opuscar (MIT), portado        |
+| Viaje de escala | 0.3.0 | Viaje: del cosmos a lo diminuto, de lo diminuto al cosmos | «flat-space-explainer» de Lemo-Opuscar (MIT), portado |
 
 Los estilos llegan de uno en uno con las actualizaciones de la app.
 
@@ -51,6 +52,40 @@ subtítulos van debajo). La cámara se ajusta al tamaño de cada modelo para que
 - **No se incluye nada de la documentación de Lemo-Opuscar** (`STYLE.md` y demás, CC BY-NC 4.0).
   Solo su código, que es MIT.
 
+## Viaje de escala
+
+Ilustración plana (colores lisos, sin degradados) sobre un cielo nocturno. Cada escena es una
+**parada** de un viaje de escala: galaxia → sistema solar → Tierra → célula → virus (y, si hay más
+escenas, vuelta a la galaxia: "zoom infinito").
+
+- **Antes de cambiar de escena:** un anillo marca la próxima parada («Próxima parada · La Tierra»),
+  Orbi (una pequeña sonda cuyo ojo es un objetivo de zoom) la apunta con una línea de puntos y la
+  cámara **se zambulle por el anillo** hasta la siguiente.
+- **Viaje al revés** («De lo diminuto al cosmos»): la cámara se aleja parada a parada y termina en
+  la galaxia.
+- **Escena de texto:** etiqueta «PARADA 01 · LA GALAXIA» y titular que sube línea a línea; las
+  líneas de énfasis van en amarillo.
+- **Escena de cifra:** la etiqueta de la cifra y un número grande que rueda hasta su valor, con la
+  unidad al lado.
+- **Arriba:** el recorrido, con una marca por parada.
+
+En vertical, la parada ocupa el tercio superior, Orbi queda a su derecha y el texto va en la franja
+del 50 al 70 % (los subtítulos, debajo). En horizontal, texto a la izquierda y parada a la derecha.
+Fuente: Jost (OFL). La paleta es la del original (fija, no usa los colores de la marca).
+
+### Cómo está hecho (y la licencia)
+
+- `looks/scale-zoom/vendor/`: `flat.js`, `heroes.js` y `orbi.js` de Lemo-Opuscar sin cambios
+  salvo las líneas de `import`/`export` (para usarlos como módulos), y `objects.js` con funciones
+  de dibujo copiadas tal cual de su `index.html` y `scenes.js`. Licencia MIT
+  (`LICENSE-lemo-opuscar.txt`) y commit de origen en cada cabecera. Los `.d.ts` son nuestros.
+- `looks/scale-zoom/stops.ts`: las cinco paradas (dibujo, dónde está la siguiente y su anillo).
+- `looks/scale-zoom/ScaleZoomStage.tsx`: la coreografía, escrita para Frameflow. Es un SVG que se
+  rehace en cada fotograma y depende solo del segundo `t`. La zambullida interpola el zoom en
+  escala logarítmica y dibuja la parada siguiente recortada dentro del anillo.
+- La película original (52 s, con su guion, voz, música y efectos) no se incluye: solo el código de
+  dibujo. Nada de `STYLE.md`/`DEMO.md` (CC BY-NC).
+
 ## Añadir un estilo
 
 1. Portar el código visual (si es de un tercero, comprobar que la licencia del **código** permite
@@ -68,7 +103,7 @@ Se portan de uno en uno, cada uno como actualización de la app. Primero los dos
 
 | #   | Estilo                    | Carpeta en el repo     | Encaja con                | Notas                                                                                                                     |
 | --- | ------------------------- | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Scale Zoom Explainer      | `flat-space-explainer` | Tips, datos curiosos      | Prioridad                                                                                                                 |
+| 1   | Scale Zoom Explainer      | `flat-space-explainer` | Tips, datos curiosos      | ✅ Portado en 0.3.0 como «Viaje de escala»                                                                                  |
 | 2   | Pictogram Motion          | `pictogram-motion`     | Tips, datos curiosos      | Prioridad                                                                                                                 |
 | 3   | Ukiyo-e                   | `ukiyoe`               | Historias, cuentos        |                                                                                                                           |
 | 4   | Shadow Puppetry           | `shadow-puppet`        | Cuentos, leyendas         |                                                                                                                           |

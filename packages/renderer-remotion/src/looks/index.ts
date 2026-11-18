@@ -2,6 +2,7 @@ import { resolveVisualStyle, type VisualStyle } from "@frameflow/core/look";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import type { ComponentType } from "react";
 import { HologramStage } from "./hologram/HologramStage";
+import { ScaleZoomStage } from "./scale-zoom/ScaleZoomStage";
 
 // Registro de estilos visuales del renderer (el catálogo está en core/look). Un estilo puede
 // aportar un "escenario": una capa que dura todo el video y dibuja las escenas a su manera.
@@ -11,6 +12,7 @@ export type StageProps = { storyboard: Storyboard; options: Record<string, strin
 
 const STAGES: Record<string, ComponentType<StageProps>> = {
 	hologram: HologramStage,
+	"scale-zoom": ScaleZoomStage,
 };
 
 /** El escenario del estilo del video, o null si las escenas se dibujan como siempre. */

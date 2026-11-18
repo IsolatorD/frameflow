@@ -3,6 +3,7 @@ import { loadFont as loadRajdhani } from "@remotion/google-fonts/Rajdhani";
 import { loadFont as loadShareTechMono } from "@remotion/google-fonts/ShareTechMono";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { formatValue, type Scene, scenesOf } from "../scenes";
 import { type HoloModelId, holoModel, isHoloModelId, modelRadius } from "./models";
 import { type Camera, drawPad, drawScanPlane, Holo, type HoloModel } from "./vendor/holo.js";
 import * as U from "./vendor/hud.js";
@@ -48,28 +49,6 @@ export function hueOf(hex: string): number | null {
 	const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
 	return Math.round((h * 60 + 360) % 360);
 }
-
-type Scene = {
-	start: number;
-	end: number;
-	content:
-		| { type: "kinetic-text"; lines: { text: string; emphasis?: boolean }[] }
-		| { type: "stat"; value: number; label: string; suffix?: string };
-};
-
-const scenesOf = (storyboard: Storyboard): Scene[] =>
-	storyboard.tracks
-		.filter((t) => t.kind === "visual" && !t.hidden)
-		.flatMap((t) => t.clips as readonly { type: string }[])
-		.filter(
-			(c): c is { type: "scene"; start: number; duration: number; content: Scene["content"] } =>
-				c.type === "scene",
-		)
-		.map((c) => ({ start: c.start, end: c.start + c.duration, content: c.content }))
-		.sort((a, b) => a.start - b.start);
-
-const formatValue = (value: number, language: string) =>
-	value.toLocaleString(language === "en" ? "en-US" : "es-ES", { maximumFractionDigits: 2 });
 
 export const HologramStage = ({
 	storyboard,

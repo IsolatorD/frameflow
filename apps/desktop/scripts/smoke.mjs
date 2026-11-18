@@ -288,6 +288,13 @@ try {
 		"La vista previa debería dibujar el holograma",
 	);
 	await page.screenshot({ path: join(shots, "11a-holograma.png") });
+	// Y se cambia, solo para este video, al estilo "Viaje de escala" (se guarda con los ajustes).
+	await page.getByText("Viaje de escala", { exact: true }).click();
+	await page.locator("#video-option-journey").waitFor();
+	expect(
+		(await page.locator("#video-option-journey").inputValue()) === "in",
+		"El viaje debería empezar por defecto en el cosmos",
+	);
 	await page.locator("#video-cta").fill("Suscríbete a Astroinfo");
 	await page.getByRole("button", { name: "+ Añadir música" }).click();
 	await page.getByText("♪ test-music.wav").waitFor();
@@ -295,6 +302,8 @@ try {
 	await page.getByRole("button", { name: "Guardar ajustes" }).click();
 	await page.getByText(/versión 4/).waitFor();
 	await page.getByRole("button", { name: /♪ test-music\.wav/ }).waitFor(); // clip en la línea de tiempo
+	await page.locator('[data-look="scale-zoom"]').first().waitFor();
+	await page.screenshot({ path: join(shots, "11a-viaje-de-escala.png") });
 	await page.waitForTimeout(500);
 	await page.screenshot({ path: join(shots, "11b-editor-ajustes.png") });
 	await page.getByRole("tab", { name: /Guion y escenas/ }).click();

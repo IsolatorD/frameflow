@@ -61,6 +61,25 @@ export const VISUAL_STYLES: readonly VisualStyleInfo[] = [
 			},
 		],
 	},
+	{
+		id: "scale-zoom",
+		name: "Viaje de escala",
+		description:
+			"Cada escena es una parada de un viaje de escala (galaxia, sistema solar, Tierra, célula, virus): Orbi, una pequeña sonda, apunta a la siguiente y la cámara se zambulle en ella. Ilustración plana. Ideal para tips y datos curiosos.",
+		credit: "Basado en «flat-space-explainer» de Lemo-Opuscar (Lemomo · LemoLab), licencia MIT.",
+		since: "0.3.0",
+		options: [
+			{
+				id: "journey",
+				label: "Viaje",
+				choices: [
+					{ id: "in", label: "Del cosmos a lo diminuto" },
+					{ id: "out", label: "De lo diminuto al cosmos" },
+				],
+				default: "in",
+			},
+		],
+	},
 ];
 
 export const visualStyleInfo = (id: string): VisualStyleInfo | null =>
