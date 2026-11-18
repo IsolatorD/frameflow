@@ -16,10 +16,10 @@ la música y la llamada a la acción funcionan igual con cualquiera.
 
 ## Catálogo
 
-| Estilo          | Desde | Opciones                                                   | Origen                                               |
-| --------------- | ----- | ---------------------------------------------------------- | ---------------------------------------------------- |
-| Libre           | 0.1.0 | —                                                          | Frameflow                                            |
-| Holograma       | 0.2.0 | Modelo 3D: planeta, con anillos, satélite, cohete          | «hologram-hud» de Lemo-Opuscar (MIT), portado        |
+| Estilo          | Desde | Opciones                                                  | Origen                                                |
+| --------------- | ----- | --------------------------------------------------------- | ----------------------------------------------------- |
+| Libre           | 0.1.0 | —                                                         | Frameflow                                             |
+| Holograma       | 0.2.0 | Modelo 3D: planeta, con anillos, satélite, cohete         | «hologram-hud» de Lemo-Opuscar (MIT), portado         |
 | Viaje de escala | 0.3.0 | Viaje: del cosmos a lo diminuto, de lo diminuto al cosmos | «flat-space-explainer» de Lemo-Opuscar (MIT), portado |
 
 Los estilos llegan de uno en uno con las actualizaciones de la app.
@@ -103,7 +103,7 @@ Se portan de uno en uno, cada uno como actualización de la app. Primero los dos
 
 | #   | Estilo                    | Carpeta en el repo     | Encaja con                | Notas                                                                                                                     |
 | --- | ------------------------- | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Scale Zoom Explainer      | `flat-space-explainer` | Tips, datos curiosos      | ✅ Portado en 0.3.0 como «Viaje de escala»                                                                                  |
+| 1   | Scale Zoom Explainer      | `flat-space-explainer` | Tips, datos curiosos      | ✅ Portado en 0.3.0 como «Viaje de escala»                                                                                |
 | 2   | Pictogram Motion          | `pictogram-motion`     | Tips, datos curiosos      | Prioridad                                                                                                                 |
 | 3   | Ukiyo-e                   | `ukiyoe`               | Historias, cuentos        |                                                                                                                           |
 | 4   | Shadow Puppetry           | `shadow-puppet`        | Cuentos, leyendas         |                                                                                                                           |
