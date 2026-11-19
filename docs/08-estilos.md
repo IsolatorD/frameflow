@@ -21,6 +21,7 @@ la música y la llamada a la acción funcionan igual con cualquiera.
 | Libre           | 0.1.0 | —                                                         | Frameflow                                             |
 | Holograma       | 0.2.0 | Modelo 3D: planeta, con anillos, satélite, cohete         | «hologram-hud» de Lemo-Opuscar (MIT), portado         |
 | Viaje de escala | 0.3.0 | Viaje: del cosmos a lo diminuto, de lo diminuto al cosmos | «flat-space-explainer» de Lemo-Opuscar (MIT), portado |
+| Pictogramas     | 0.4.0 | Color: uno distinto en cada escena o uno fijo (6 colores) | «pictogram-motion» de Lemo-Opuscar (MIT), portado     |
 
 Los estilos llegan de uno en uno con las actualizaciones de la app.
 
@@ -86,6 +87,38 @@ Fuente: Jost (OFL). La paleta es la del original (fija, no usa los colores de la
 - La película original (52 s, con su guion, voz, música y efectos) no se incluye: solo el código de
   dibujo. Nada de `STYLE.md`/`DEMO.md` (CC BY-NC).
 
+## Pictogramas
+
+Diseño gráfico de señalética, en colores planos de cinco tonos:
+
+- **Fondo:** una trama de figuras geométricas (discos, cuartos de círculo, rayas, ondas, flechas,
+  soles) cuyas filas se deslizan en sentidos opuestos.
+- **Escena de texto:** un gran disco con un pictograma animado, distinto en cada escena (sol, nube con
+  lluvia, paraguas que se abre, rayo, llave, luna, huellas que avanzan). Al lado, «ESCENA 02 / 05»
+  tecleado y el titular en letra muy gruesa subiendo línea a línea; el énfasis va en el color de
+  acento.
+- **Escena de cifra:** el número rueda dentro del disco, con la unidad debajo y un aro que se llena;
+  la etiqueta de la cifra va como titular.
+- **Entre escenas:** transiciones de rejilla (filas, cuartos de círculo, columnas, losetas que giran,
+  mitades, deslizamiento), una distinta en cada corte.
+- **Color:** por defecto cada escena tiene el suyo (verde azulado, azul noche, coral, tinta, celeste,
+  amarillo); la opción «Color» fija uno para todo el video. No usa los colores de la marca.
+- Arriba, el título del video; abajo, una marca por escena.
+
+En vertical, el disco ocupa el tercio superior y el texto la franja central (los subtítulos,
+debajo). En horizontal, texto a la izquierda y disco a la derecha. Fuentes: Inter Tight y DM Mono
+(OFL).
+
+### Cómo está hecho (y la licencia)
+
+- `looks/pictogram/vendor/engine.js`: el motor de Lemo-Opuscar **sin cambios** (paleta, trama,
+  pictogramas, texto enmascarado), con su licencia MIT y el commit de origen. El `.d.ts` es nuestro.
+- `looks/pictogram/transitions.ts`: las transiciones de su `film.js`, adaptadas a cualquier tamaño.
+- `looks/pictogram/PictogramStage.tsx`: la coreografía, escrita para Frameflow (canvas redibujado
+  en cada fotograma, solo depende del segundo `t`). La trama usa los motivos geométricos del
+  original, sin los de lluvia ni el paraguas de su historia.
+- No se incluye su película («Left Behind»), ni su música, ni `STYLE.md`/`DEMO.md` (CC BY-NC).
+
 ## Añadir un estilo
 
 1. Portar el código visual (si es de un tercero, comprobar que la licencia del **código** permite
@@ -104,7 +137,7 @@ Se portan de uno en uno, cada uno como actualización de la app. Primero los dos
 | #   | Estilo                    | Carpeta en el repo     | Encaja con                | Notas                                                                                                                     |
 | --- | ------------------------- | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Scale Zoom Explainer      | `flat-space-explainer` | Tips, datos curiosos      | ✅ Portado en 0.3.0 como «Viaje de escala»                                                                                |
-| 2   | Pictogram Motion          | `pictogram-motion`     | Tips, datos curiosos      | Prioridad                                                                                                                 |
+| 2   | Pictogram Motion          | `pictogram-motion`     | Tips, datos curiosos      | ✅ Portado en 0.4.0 como «Pictogramas»                                                                                    |
 | 3   | Ukiyo-e                   | `ukiyoe`               | Historias, cuentos        |                                                                                                                           |
 | 4   | Shadow Puppetry           | `shadow-puppet`        | Cuentos, leyendas         |                                                                                                                           |
 | 5   | Chinese Ink Wash          | `ink-wash`             | Historias, cuentos        |                                                                                                                           |

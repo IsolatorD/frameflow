@@ -80,6 +80,30 @@ export const VISUAL_STYLES: readonly VisualStyleInfo[] = [
 			},
 		],
 	},
+	{
+		id: "pictogram",
+		name: "Pictogramas",
+		description:
+			"Diseño gráfico de señalética: una trama de figuras geométricas que se desliza, un gran disco con un pictograma animado (o tu cifra) y titulares en letra muy gruesa. Cada escena con su color y transiciones de rejilla.",
+		credit: "Basado en «pictogram-motion» de Lemo-Opuscar (Lemomo · LemoLab), licencia MIT.",
+		since: "0.4.0",
+		options: [
+			{
+				id: "color",
+				label: "Color",
+				choices: [
+					{ id: "cycle", label: "Uno distinto en cada escena" },
+					{ id: "teal", label: "Verde azulado" },
+					{ id: "navy", label: "Azul noche" },
+					{ id: "coral", label: "Coral" },
+					{ id: "ink", label: "Tinta" },
+					{ id: "sky", label: "Celeste" },
+					{ id: "yellow", label: "Amarillo" },
+				],
+				default: "cycle",
+			},
+		],
+	},
 ];
 
 export const visualStyleInfo = (id: string): VisualStyleInfo | null =>

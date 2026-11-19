@@ -32,6 +32,9 @@ describe("estilos visuales", () => {
 		expect(visualStyleLabel({ id: "scale-zoom", options: {} })).toBe(
 			"Viaje de escala · Del cosmos a lo diminuto",
 		);
+		expect(visualStyleLabel({ id: "pictogram", options: { color: "coral" } })).toBe(
+			"Pictogramas · Coral",
+		);
 		expect(visualStyleLabel(FREE_STYLE)).toBe("Libre");
 	});
 });

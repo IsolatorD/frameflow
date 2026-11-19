@@ -60,4 +60,4 @@ pnpm --filter @frameflow/desktop dist   # instalador para este sistema (apps/des
 GPL-3.0 (ver `LICENSE`): eSpeak NG, que convierte el texto en fonemas para la voz, es GPL-3.0.
 Kokoro (modelo de voz) es Apache-2.0; Remotion tiene su propia licencia. Detalles en `docs/05-voz.md`.
 El estilo Holograma usa el motor de «hologram-hud» de [Lemo-Opuscar](https://github.com/lemomo-ai/lemo-opuscar)
-(Lemomo · LemoLab, código MIT; ver `docs/08-estilos.md`), igual que el Viaje de escala («flat-space-explainer»).
+(Lemomo · LemoLab, código MIT; ver `docs/08-estilos.md`), igual que el Viaje de escala («flat-space-explainer») y Pictogramas («pictogram-motion»).

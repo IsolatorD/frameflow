@@ -1,14 +1,42 @@
 # Hoja de ruta
 
-> 2026-11-18 · lo pendiente, con las ideas tomadas de otros repositorios. Se actualiza al cerrar o
-> añadir trabajo. Última versión publicada: **v0.2.0**; la voz grabada (`a11a7eb`) aún no se ha
-> publicado.
+> 2026-11-19 · lo pendiente, con las ideas tomadas de otros repositorios. Se actualiza al cerrar o
+> añadir trabajo. Última versión publicada: **v0.3.0** (voz grabada por escena y estilo Viaje de
+> escala).
 
-## Próxima versión (v0.3.0)
+## Próxima versión (v0.4.0)
 
-- [x] Voz grabada por escena (`docs/09-voz-grabada.md`).
-- [x] Estilo **Viaje de escala** (Scale Zoom Explainer, `docs/08-estilos.md`).
-- [ ] Publicar la v0.3.0.
+Candidatos, en este orden:
+
+- [x] Estilo **Pictogramas** (Pictogram Motion, `docs/08-estilos.md`).
+- [ ] **«Revisar guion» con IA** (ver Guion).
+- [ ] **Estilo desde una referencia**, fase 1 (ver abajo).
+
+## Estilo desde una referencia
+
+Cargar una imagen o un video de referencia y que la app **proponga los ajustes** que la imitan con
+lo que ya existe: colores, fuente, estilo del catálogo y ritmo. No se genera un estilo animado nuevo
+(cada estilo es código escrito a mano). Se imita el estilo, no el contenido: los personajes, logos o
+imágenes de la referencia no pasan al video. Las propuestas se aplican al proyecto (marca) o solo al
+video, y se pueden revisar antes.
+
+1. **Colores y tipografía** (local, sin IA):
+   - paleta dominante de la imagen o de varios fotogramas del video (agrupar colores);
+   - propuesta de fondo, texto y acento, comprobando el contraste;
+   - la fuente más parecida entre las disponibles (por rasgos: con o sin serifa, grosor, ancho).
+2. **Ritmo** (local, con lo que ya hay):
+   - detectar los cortes del video (diferencia entre fotogramas) → duración media de las escenas;
+   - transcribir la voz con Whisper → palabras por segundo, duración del gancho y estructura;
+   - usarlo en las duraciones de las escenas y como plantilla para el guion con IA.
+3. **Análisis con IA de visión:**
+   - describir el estilo (técnica, fondo, composición, tratamiento del texto, personaje guía…);
+   - elegir el estilo del catálogo más parecido y sus opciones, y decir si se parece a uno de la
+     cola aún sin portar;
+   - con Claude, OpenAI o Gemini (clave del usuario) o con un modelo local de visión, que sería otra
+     descarga de unos 5–8 GB (Qwen3 solo lee texto).
+
+**Privacidad:** el análisis local no saca nada del equipo. Con un proveedor en la nube se envían
+algunos fotogramas: la app lo avisa antes de analizar.
 
 ## Guion
 

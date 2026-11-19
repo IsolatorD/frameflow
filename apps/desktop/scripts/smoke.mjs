@@ -288,6 +288,13 @@ try {
 		"La vista previa debería dibujar el holograma",
 	);
 	await page.screenshot({ path: join(shots, "11a-holograma.png") });
+	// El catálogo ofrece Pictogramas con su opción de color…
+	await page.getByText("Pictogramas", { exact: true }).click();
+	await page.locator("#video-option-color").waitFor();
+	expect(
+		(await page.locator("#video-option-color").inputValue()) === "cycle",
+		"Pictogramas debería cambiar de color en cada escena por defecto",
+	);
 	// Y se cambia, solo para este video, al estilo "Viaje de escala" (se guarda con los ajustes).
 	await page.getByText("Viaje de escala", { exact: true }).click();
 	await page.locator("#video-option-journey").waitFor();
