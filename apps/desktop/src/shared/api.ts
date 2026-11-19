@@ -15,6 +15,7 @@ import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/scrip
 import type { LlmStatus } from "@frameflow/core/script/ai";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { NewOverlay, OverlayOp } from "@frameflow/core/script/overlays";
+import type { ScriptReview } from "@frameflow/core/script/review";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 import type { UpdateState } from "./updates";
 
@@ -91,6 +92,9 @@ export type FrameflowApi = {
 			pcm: Float32Array,
 			sampleRate: number,
 		): Promise<IpcResult<void>>;
+		/** «Revisar guion»: la IA lee el guion guardado y propone cambios (no modifica nada). */
+		reviewScript(id: string): Promise<IpcResult<ScriptReview>>;
+		cancelReview(id: string): Promise<IpcResult<void>>;
 		render(id: string): Promise<IpcResult<void>>;
 		cancel(id: string): Promise<IpcResult<void>>;
 		/** Abre el último MP4 en el reproductor del sistema, o lo muestra en el Finder. */
@@ -158,6 +162,8 @@ export const IPC = {
 	videosPickMusic: "videos:pick-music",
 	videosGenerateVoice: "videos:generate-voice",
 	videosRecordVoice: "videos:record-voice",
+	videosReviewScript: "videos:review-script",
+	videosCancelReview: "videos:cancel-review",
 	videosRender: "videos:render",
 	videosCancel: "videos:cancel",
 	videosOpenRender: "videos:open-render",

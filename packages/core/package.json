@@ -12,6 +12,7 @@
 		"./storyboard/v1": "./src/storyboard/v1.ts",
 		"./script": "./src/script/script.ts",
 		"./script/ai": "./src/script/ai.ts",
+		"./script/review": "./src/script/review.ts",
 		"./video": "./src/video/video.ts",
 		"./script/quality": "./src/script/quality.ts",
 		"./script/edit": "./src/script/edit.ts",

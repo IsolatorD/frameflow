@@ -88,6 +88,33 @@ const testImage = join(home, "test-image.png");
 // del 14B va lenta para poder cancelarla.
 // SMOKE_RUNTIME=1: ignora el Ollama del sistema y descarga el de verdad desde la app (red real).
 const realRuntime = Boolean(process.env.SMOKE_RUNTIME);
+// Respuesta de la IA simulada a «Revisar guion».
+const FAKE_REVIEW = {
+	verdict: "El gancho promete una respuesta, pero el cierre no la da.",
+	keep: ["La pregunta del principio"],
+	suggestions: [
+		{
+			scene: 1,
+			aspect: "gancho",
+			quote: "",
+			problem: "La primera frase no plantea una pregunta concreta.",
+			change: "Empieza con la pregunta que el video va a responder.",
+			narration: "¿Por qué el cielo es azul y no blanco como la luz del Sol?",
+			lines: ["¿Azul o blanco?"],
+			emphasis: 0,
+		},
+		{
+			scene: 0,
+			aspect: "cierre",
+			quote: "",
+			problem: "El final no resume la respuesta.",
+			change: "Cierra con la explicación en una frase.",
+			narration: "",
+			lines: [],
+			emphasis: -1,
+		},
+	],
+};
 const fakeOllama = process.env.SMOKE_AI || realRuntime ? null : await startFakeOllama();
 // Servidor de actualizaciones simulado: anuncia la versión 99.0.0 (no se descarga nada).
 const fakeUpdates = await startFakeUpdates();
@@ -817,6 +844,32 @@ try {
 	await page.getByText(/Para tu equipo:/).waitFor();
 	await fileHas("ai-settings.json", '"provider": "ollama"', true, "No se volvió a Ollama");
 
+	// «Revisar guion» con la IA local (simulada): veredicto, propuestas y aplicar una.
+	if (fakeOllama) {
+		await page.getByRole("button", { name: "Astroinfo" }).click();
+		await page.getByRole("button", { name: "Biblioteca", exact: true }).click();
+		await page.getByRole("button", { name: /Por qué el cielo es azul/ }).click();
+		await page.getByRole("heading", { level: 1, name: "Por qué el cielo es azul" }).waitFor();
+		await page.getByRole("button", { name: "Revisar guion", exact: true }).click();
+		await page.getByText(FAKE_REVIEW.verdict).waitFor({ timeout: 30_000 });
+		await page.getByText("Lo que funciona").waitFor();
+		expect(
+			(await page.getByRole("button", { name: /^Aplicar la propuesta/ }).count()) === 1,
+			"Solo la propuesta con narración debería poder aplicarse",
+		);
+		await page.screenshot({ path: join(shots, "11f-revisar-guion.png") });
+		await page.getByRole("button", { name: "Aplicar la propuesta para Escena 1" }).click();
+		await page.getByText("Aplicada", { exact: true }).first().waitFor();
+		const firstNarration = page.locator("textarea").first();
+		await firstNarration.waitFor();
+		expect(
+			(await firstNarration.inputValue()) === FAKE_REVIEW.suggestions[0].narration,
+			"La narración de la escena 1 debería ser la propuesta",
+		);
+		await page.getByRole("button", { name: "Cerrar" }).first().click();
+		await page.getByRole("button", { name: "Revisar guion", exact: true }).waitFor();
+	}
+
 	// Volver al listado desde la barra lateral.
 	await page.getByRole("button", { name: "Todos los proyectos" }).click();
 	await page.getByRole("heading", { level: 1, name: "Proyectos" }).waitFor();
@@ -870,6 +923,14 @@ async function startFakeOllama() {
 			installed.add(model);
 			line({ status: "success" });
 			return res.end();
+		}
+		if (req.url === "/api/chat" && req.method === "POST") {
+			let body = "";
+			for await (const chunk of req) body += chunk;
+			const { messages } = JSON.parse(body);
+			// Solo la revisión de guion (el modo automático con IA se prueba con SMOKE_AI y el real).
+			if (!messages[0]?.content.includes("editor exigente")) return res.writeHead(404).end();
+			return json(res, { message: { content: JSON.stringify(FAKE_REVIEW) } });
 		}
 		res.writeHead(404).end();
 	});

@@ -1,6 +1,7 @@
 import type { MusicSettings, Script, VideoSettings } from "@frameflow/core/script";
 import type { CaptionEdit, TimelineEdit } from "@frameflow/core/script/edit";
 import type { NewOverlay, OverlayOp } from "@frameflow/core/script/overlays";
+import type { ScriptReview } from "@frameflow/core/script/review";
 import type { CreateVideoInput, JobEvent, VideoDetail, VideoSummary } from "@frameflow/core/video";
 import { unwrap } from "../../utils/unwrap/unwrap";
 
@@ -37,6 +38,9 @@ export const videosService = {
 		pcm: Float32Array,
 		sampleRate: number,
 	): Promise<void> => unwrap(window.frameflow.videos.recordVoice(id, sceneId, pcm, sampleRate)),
+	reviewScript: (id: string): Promise<ScriptReview> =>
+		unwrap(window.frameflow.videos.reviewScript(id)),
+	cancelReview: (id: string): Promise<void> => unwrap(window.frameflow.videos.cancelReview(id)),
 	render: (id: string): Promise<void> => unwrap(window.frameflow.videos.render(id)),
 	cancel: (id: string): Promise<void> => unwrap(window.frameflow.videos.cancel(id)),
 	openRender: (id: string, how: "open" | "reveal"): Promise<void> =>

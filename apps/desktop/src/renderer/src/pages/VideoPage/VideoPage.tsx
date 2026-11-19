@@ -57,6 +57,7 @@ import {
 import { PreviewOverlayEditor } from "./PreviewOverlayEditor/PreviewOverlayEditor";
 import { PublishSection } from "./PublishSection/PublishSection";
 import { RecordVoiceDialog } from "./RecordVoiceDialog/RecordVoiceDialog";
+import { ScriptReviewSection } from "./ScriptReviewSection/ScriptReviewSection";
 import { StoryboardPreview } from "./StoryboardPreview/StoryboardPreview";
 import {
 	BUSY_MESSAGE,
@@ -358,7 +359,14 @@ export function VideoPage() {
 								role="tabpanel"
 								aria-labelledby="video-edit-tab-script"
 								hidden={tab !== "script"}
+								className="flex flex-col gap-4"
 							>
+								<ScriptReviewSection
+									script={script}
+									actions={actions}
+									dirty={scriptDirty}
+									busy={busy}
+								/>
 								<ScriptEditor
 									value={script}
 									estimateSeconds={estimateSeconds}

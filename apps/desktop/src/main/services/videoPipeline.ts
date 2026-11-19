@@ -24,6 +24,7 @@ import {
 	updateCaptions,
 } from "@frameflow/core/script/edit";
 import { applyOverlayOp, type OverlayOp } from "@frameflow/core/script/overlays";
+import { reviewScript as reviewWithAi, type ScriptReview } from "@frameflow/core/script/review";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import {
 	type CreateVideoInput,
@@ -284,6 +285,9 @@ export function createVideoPipeline(deps: Deps) {
 		}
 	};
 
+	// Revisiones de guion en marcha (no son tareas del video: no cambian su estado).
+	const reviews = new Map<string, AbortController>();
+
 	// Duración objetivo pedida al crear (solo la necesita la IA, no se guarda).
 	const targetSeconds = new Map<string, number>();
 
@@ -350,6 +354,39 @@ export function createVideoPipeline(deps: Deps) {
 				previous: video.storyboard,
 			});
 			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
+		},
+
+		/**
+		 * «Revisar guion»: la IA lee el guion guardado y devuelve un veredicto y propuestas. No guarda
+		 * nada: las propuestas se aplican (o no) desde el editor, como una edición más.
+		 */
+		async reviewScript(videoId: string): Promise<ScriptReview> {
+			if (reviews.has(videoId)) throw new Error("Ya se está revisando este guion");
+			const video = await loadVideo(videoId);
+			const project = await loadProject(video.projectId);
+			const llm = await deps.llm();
+			const status = await llm.status();
+			if (!status.available) throw new Error(status.reason);
+			const controller = new AbortController();
+			reviews.set(videoId, controller);
+			try {
+				return await reviewWithAi(llm, scriptFromStoryboard(video.storyboard), {
+					topic: video.topic,
+					tone: project.brandKit.tone,
+					language: video.language,
+					channel: project.name,
+					signal: controller.signal,
+				});
+			} catch (error) {
+				if (controller.signal.aborted) throw new Error("Revisión cancelada");
+				throw error;
+			} finally {
+				reviews.delete(videoId);
+			}
+		},
+
+		cancelReview(videoId: string) {
+			reviews.get(videoId)?.abort();
 		},
 
 		/** Subtítulos, llamada a la acción y música (no tocan el guion ni las voces). */

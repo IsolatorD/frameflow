@@ -9,7 +9,7 @@
 Candidatos, en este orden:
 
 - [x] Estilo **Pictogramas** (Pictogram Motion, `docs/08-estilos.md`).
-- [ ] **«Revisar guion» con IA** (ver Guion).
+- [x] **«Revisar guion» con IA** (`docs/04-guion-ia.md`).
 - [ ] **Estilo desde una referencia**, fase 1 (ver abajo).
 
 ## Estilo desde una referencia

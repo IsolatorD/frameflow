@@ -70,6 +70,8 @@ export function useVideoActions(videoId: string) {
 				videosService.recordVoice(videoId, input.sceneId, input.pcm, input.sampleRate),
 			onSettled: refresh,
 		}),
+		reviewScript: useMutation({ mutationFn: () => videosService.reviewScript(videoId) }),
+		cancelReview: useMutation({ mutationFn: () => videosService.cancelReview(videoId) }),
 		render: useMutation({ mutationFn: () => videosService.render(videoId), onSettled: refresh }),
 		cancel: useMutation({ mutationFn: () => videosService.cancel(videoId) }),
 		openRender: useMutation({

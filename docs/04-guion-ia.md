@@ -65,6 +65,36 @@ un equipo de 16 GB). Muestra pequeña: 4 temas, una pasada por modelo.
 - La duración real varía (0,5–1,1× lo pedido); la voz final manda.
 - Para mejores datos: el modelo local 14B o un proveedor en la nube (ver abajo).
 
+## Revisar guion con IA
+
+En «Guion y escenas», **Revisar guion** pide a la IA elegida en Ajustes que lea el guion **guardado**
+como un editor exigente (`core/script/review.ts`). No cambia nada por sí sola. Devuelve:
+
+- un **veredicto** franco (el problema o la fortaleza dominante);
+- hasta 3 cosas que **conviene conservar**;
+- de 1 a 5 **propuestas**, las de mayor impacto primero. Cada una indica:
+  - la escena (o todo el video) y el aspecto: gancho, promesa y entrega, claridad, progresión,
+    dato, cierre o estilo;
+  - la frase citada, el problema y el ajuste;
+  - cuando se puede, la **narración reescrita** (y el texto en pantalla), que se aplica con
+    **Aplicar**. Se guarda como una edición más, con historial y deshacer. La voz de esa escena
+    deja de estar al día.
+
+Criterios: promesa y entrega, comprensión desde cero, progresión, concreción y credibilidad, y
+cierre. Sin elogios de compromiso, notas numéricas ni promesas de viralidad, y sin inventar cifras.
+Están inspirados en la skill «cuestionar-guion» de
+[skills-videos-cortos](https://github.com/JustCarlos30/skills-videos-cortos) (MIT); el texto del
+prompt es nuestro.
+
+La respuesta se valida y, si no es válida, se le devuelve el error a la IA (hasta 3 intentos):
+
+- escena inexistente;
+- números con cifras en la narración;
+- narración mucho más larga que la original;
+- texto en pantalla para una escena de cifra.
+
+Con el modelo local tarda de 2 a 5 minutos y se puede cancelar.
+
 ## Proveedores (Ajustes → IA)
 
 Quien escribe el guion se elige en **Ajustes**: un modelo local con Ollama (Qwen3 8B o 14B) o un
@@ -110,4 +140,11 @@ solo en el proceso principal).
 ```bash
 FRAMEFLOW_EVAL_OUT=/tmp/eval.jsonl FRAMEFLOW_EVAL_VARIANT='{"think":true}' \
   pnpm --filter @frameflow/core exec vitest run ai.eval
+```
+
+«Revisar guion» con el modelo real, sobre un guion con fallos a propósito (el gancho promete
+explicar por qué Marte es rojo y el video nunca lo hace):
+
+```bash
+FRAMEFLOW_LIVE_AI=1 pnpm --filter @frameflow/core exec vitest run review.live --disable-console-intercept
 ```

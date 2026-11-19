@@ -60,6 +60,8 @@ const api: FrameflowApi = {
 		generateVoice: (id) => ipcRenderer.invoke(IPC.videosGenerateVoice, id),
 		recordVoice: (id, sceneId, pcm, sampleRate) =>
 			ipcRenderer.invoke(IPC.videosRecordVoice, id, sceneId, pcm, sampleRate),
+		reviewScript: (id) => ipcRenderer.invoke(IPC.videosReviewScript, id),
+		cancelReview: (id) => ipcRenderer.invoke(IPC.videosCancelReview, id),
 		render: (id) => ipcRenderer.invoke(IPC.videosRender, id),
 		cancel: (id) => ipcRenderer.invoke(IPC.videosCancel, id),
 		openRender: (id, how) => ipcRenderer.invoke(IPC.videosOpenRender, id, how),

@@ -195,6 +195,12 @@ export function registerIpcHandlers(deps: {
 				return pipeline.recordVoice(uuid(id), z.string().min(1).parse(sceneId), pcm, rate);
 			}),
 	);
+	ipcMain.handle(IPC.videosReviewScript, (_e, id: unknown) =>
+		wrap(() => pipeline.reviewScript(uuid(id))),
+	);
+	ipcMain.handle(IPC.videosCancelReview, (_e, id: unknown) =>
+		wrap(() => pipeline.cancelReview(uuid(id))),
+	);
 	ipcMain.handle(IPC.videosRender, (_e, id: unknown) => wrap(() => pipeline.render(uuid(id))));
 	ipcMain.handle(IPC.videosCancel, (_e, id: unknown) => wrap(() => pipeline.cancel(uuid(id))));
 	ipcMain.handle(IPC.videosOpenRender, (_e, id: unknown, how: unknown) =>
