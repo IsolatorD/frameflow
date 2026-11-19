@@ -64,6 +64,9 @@ describe("abrir la base de datos", () => {
 		const { assembleStoryboard, starterScript } = await import("@frameflow/core/script");
 		// Base en la versión anterior (2 migraciones) con una publicación de una cuenta conectada.
 		const old = await openDatabase(url(), migrationsUpTo(2));
+		// El repositorio actual lee columnas de migraciones posteriores (p. ej. la sonoridad del
+		// render, 0003): se añaden de forma temporal para preparar los datos y se quitan antes de migrar.
+		await old.$client.execute("ALTER TABLE renders ADD loudness_lufs real");
 		const project = await createProjectsRepository(old).create({
 			name: "Astroinfo",
 			presetId: "ciencia",
@@ -98,6 +101,7 @@ describe("abrir la base de datos", () => {
 				VALUES ('pub', ?, 'acc', 'api', 'Título', '["#luz"]')`,
 			args: [render.id],
 		});
+		await old.$client.execute("ALTER TABLE renders DROP COLUMN loudness_lufs");
 		old.$client.close();
 
 		const db = await openDatabase(url(), MIGRATIONS);

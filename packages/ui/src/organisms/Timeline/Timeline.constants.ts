@@ -4,6 +4,7 @@ export const CLIP_COLORS: Record<TimelineClipKind, string> = {
 	scene: "bg-violet-500/25 ring-violet-400/50 text-violet-100",
 	voice: "bg-emerald-500/20 ring-emerald-400/40 text-emerald-100",
 	music: "bg-amber-400/15 ring-amber-400/40 text-amber-100",
+	sfx: "bg-orange-400/15 ring-orange-300/40 text-orange-100",
 	text: "bg-sky-500/20 ring-sky-400/40 text-sky-100",
 	media: "bg-pink-500/20 ring-pink-400/40 text-pink-100",
 };

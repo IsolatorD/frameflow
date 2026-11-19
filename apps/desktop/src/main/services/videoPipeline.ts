@@ -43,6 +43,7 @@ import { WHISPER_SAMPLE_RATE } from "@frameflow/core/voice/whisperModel";
 import type { ProjectsRepository } from "@frameflow/db/projects";
 import type { VideosRepository } from "@frameflow/db/videos";
 import { type RemotionSource, renderStoryboard } from "./render";
+import { ensureSfxFiles, usesSfx } from "./sfxFiles";
 import { encodeWav, type VoiceEngine } from "./voice/kokoro";
 import type { Whisper } from "./voice/whisper";
 
@@ -261,6 +262,7 @@ export function createVideoPipeline(deps: Deps) {
 		progress: (p: number | null, message: string) => void,
 	) => {
 		await deps.videos.setStatus(video.id, "rendering");
+		if (usesSfx(video.storyboard)) ensureSfxFiles(projectDir(project));
 		const render = await deps.videos.createRender(video.id);
 		const dir = join(projectDir(project), "videos", video.id, "renders");
 		mkdirSync(dir, { recursive: true });
@@ -394,6 +396,7 @@ export function createVideoPipeline(deps: Deps) {
 			if (running.has(videoId)) throw new Error("Espera a que termine la tarea en marcha");
 			const video = await loadVideo(videoId);
 			const sb = applyVideoSettings(video.storyboard, settings);
+			if (usesSfx(sb)) ensureSfxFiles(projectDir(await loadProject(video.projectId)));
 			return deps.videos.saveVersion(videoId, sb, "editor", statusAfterEdit(sb));
 		},
 

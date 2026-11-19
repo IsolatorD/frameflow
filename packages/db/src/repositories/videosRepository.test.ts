@@ -129,10 +129,16 @@ describe("videosRepository", () => {
 			durationSec: 9.5,
 			width: 1080,
 			height: 1920,
+			loudnessLufs: -14,
 		});
 		await videos.saveVersion(v.id, storyboardFor("luz 2", true), "editor");
 		const detail = await videos.get(v.id);
-		expect(detail?.render).toMatchObject({ status: "done", path: "/x/v1.mp4", versionNumber: 1 });
+		expect(detail?.render).toMatchObject({
+			status: "done",
+			path: "/x/v1.mp4",
+			versionNumber: 1,
+			loudnessLufs: -14,
+		});
 		expect(detail?.versionNumber).toBe(2); // el MP4 quedó desactualizado
 	});
 

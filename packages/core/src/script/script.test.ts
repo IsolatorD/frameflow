@@ -319,6 +319,7 @@ describe("assembleStoryboard", () => {
 			visualStyle: { id: "libre", options: {} },
 			ctaText: "Más en el canal",
 			music,
+			sfx: null,
 		});
 		const longer = assembleStoryboard({
 			script: {
@@ -379,5 +380,61 @@ describe("voz grabada", () => {
 		});
 		expect([...recordedSceneIds(sb)]).toEqual([ids[0]]);
 		expect(voicedSceneIds(sb).has(ids[1] as string)).toBe(true);
+	});
+});
+
+describe("efectos de sonido", () => {
+	const base = () =>
+		assembleStoryboard({
+			script: starterScript("el cielo"),
+			language: "es",
+			format: "9:16",
+			style,
+			ctaText: "Síguenos",
+			sfx: { volume: 0.4 },
+		});
+
+	it("pone un barrido por cambio de escena con el pico en el corte y campanita con la llamada a la acción", () => {
+		const sb = base();
+		const track = sb.tracks.find((t) => t.id === "track-sfx");
+		expect(track?.kind).toBe("audio");
+		const clips = track?.clips ?? [];
+		const scenes = sb.tracks[0]?.clips ?? [];
+		const second = scenes[1]?.start ?? 0;
+		const whoosh = clips.find((c) => c.type === "audio" && c.src.endsWith("whoosh.wav"));
+		expect(whoosh?.start).toBeCloseTo(second - 0.3, 5);
+		expect(clips.some((c) => c.type === "audio" && c.src.endsWith("pop.wav"))).toBe(true);
+		expect(clips.some((c) => c.type === "audio" && c.src.endsWith("chime.wav"))).toBe(true);
+		expect(videoSettingsFromStoryboard(sb).sfx).toEqual({ volume: 0.4 });
+	});
+
+	it("se conservan al editar, siguen a las escenas, respetan el silencio de la pista y se pueden quitar", () => {
+		const sb = base();
+		const muted = {
+			...sb,
+			tracks: sb.tracks.map((t) => (t.id === "track-sfx" ? { ...t, muted: true } : t)),
+		};
+		const script = scriptFromStoryboard(muted);
+		const longer = {
+			...script,
+			scenes: script.scenes.map((s, i) =>
+				i === 0 ? { ...s, narration: `${s.narration} Y mucho más texto aquí.` } : s,
+			),
+		};
+		const edited = assembleStoryboard({
+			script: longer,
+			language: "es",
+			format: "9:16",
+			style,
+			previous: muted,
+		});
+		const track = edited.tracks.find((t) => t.id === "track-sfx");
+		expect(track?.kind === "audio" && track.muted).toBe(true);
+		const second = edited.tracks[0]?.clips[1]?.start ?? 0;
+		expect(track?.clips[0]?.start).toBeCloseTo(second - 0.3, 5);
+
+		const settings = videoSettingsFromStoryboard(edited);
+		const off = applyVideoSettings(edited, { ...settings, sfx: null });
+		expect(off.tracks.some((t) => t.id === "track-sfx")).toBe(false);
 	});
 });

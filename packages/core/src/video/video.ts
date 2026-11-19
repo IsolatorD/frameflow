@@ -40,6 +40,8 @@ export type RenderInfo = {
 	path: string | null;
 	sizeBytes: number | null;
 	durationSec: number | null;
+	/** Sonoridad final (LUFS) tras masterizar. */
+	loudnessLufs: number | null;
 	error: string | null;
 	finishedAt: string | null;
 	/** Versión del storyboard que se renderizó (para saber si el MP4 está al día). */

@@ -131,6 +131,7 @@ export const createVideosRepository = (db: Database) => {
 						path: last.render.path,
 						sizeBytes: last.render.sizeBytes,
 						durationSec: last.render.durationSec,
+						loudnessLufs: last.render.loudnessLufs,
 						error: last.render.error,
 						finishedAt: last.render.finishedAt,
 						versionNumber: last.versionNumber,
@@ -229,6 +230,7 @@ export const createVideosRepository = (db: Database) => {
 						durationSec: number;
 						width: number;
 						height: number;
+						loudnessLufs: number | null;
 				  }
 				| { ok: false; error: string },
 		) {
@@ -243,6 +245,7 @@ export const createVideosRepository = (db: Database) => {
 								durationSec: result.durationSec,
 								width: result.width,
 								height: result.height,
+								loudnessLufs: result.loudnessLufs,
 								finishedAt: now,
 							}
 						: { status: "failed", error: result.error, finishedAt: now },

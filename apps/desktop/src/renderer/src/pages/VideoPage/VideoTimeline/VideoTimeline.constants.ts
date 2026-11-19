@@ -64,8 +64,15 @@ export const timelineTracks = (
 							label:
 								clip.role === "music"
 									? `♪ ${clip.label ?? "Música"}`
-									: (clip.words?.map((w) => w.text).join(" ") ?? "Voz"),
-							kind: clip.role === "music" ? ("music" as const) : ("voice" as const),
+									: clip.role === "sfx"
+										? (clip.label ?? "Efecto")
+										: (clip.words?.map((w) => w.text).join(" ") ?? "Voz"),
+							kind:
+								clip.role === "music"
+									? ("music" as const)
+									: clip.role === "sfx"
+										? ("sfx" as const)
+										: ("voice" as const),
 						};
 					case "text":
 						return {

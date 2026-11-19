@@ -22,6 +22,13 @@
       "when": 1794952615083,
       "tag": "0002_dapper_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795066908806,
+      "tag": "0003_even_scarecrow",
+      "breakpoints": true
     }
   ]
 }

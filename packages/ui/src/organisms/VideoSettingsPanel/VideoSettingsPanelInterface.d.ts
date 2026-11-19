@@ -17,6 +17,8 @@ export interface VideoSettingsDraft {
 	visualStyle: VisualStyleValue;
 	ctaText: string;
 	music: MusicDraft | null;
+	/** Efectos de sonido sutiles (null = sin efectos). */
+	sfx: { volume: number } | null;
 }
 
 export interface VideoSettingsPanelProps {
@@ -30,6 +32,8 @@ export interface VideoSettingsPanelProps {
 	projectStyleLabel?: string;
 	wordsPerPageRange: { min: number; max: number };
 	volumeRange: { min: number; max: number; step: number };
+	/** Volumen inicial de los efectos al activarlos. */
+	defaultSfxVolume?: number;
 	onDirtyChange?: (dirty: boolean) => void;
 	saving?: boolean;
 	serverError?: string;

@@ -18,6 +18,7 @@ export function VideoSettingsPanel({
 	onPickMusic,
 	wordsPerPageRange,
 	volumeRange,
+	defaultSfxVolume = 0.4,
 	onDirtyChange,
 	saving = false,
 	serverError,
@@ -177,6 +178,31 @@ export function VideoSettingsPanel({
 							{pickError}
 						</p>
 					) : null}
+				</Section>
+
+				<Section
+					title="Efectos de sonido"
+					description="Sutiles: un barrido en cada cambio de escena, un «pop» cuando aparece una cifra y una campanita con la llamada a la acción. Aparecen como pista en la línea de tiempo."
+				>
+					<div className="flex flex-col gap-4">
+						<SwitchField
+							label="Efectos de sonido"
+							checked={draft.sfx !== null}
+							onChange={(on) =>
+								setDraft((d) => ({ ...d, sfx: on ? { volume: defaultSfxVolume } : null }))
+							}
+						/>
+						{draft.sfx ? (
+							<RangeField
+								id="video-sfx-volume"
+								label="Volumen de los efectos"
+								value={draft.sfx.volume}
+								{...volumeRange}
+								format={percent}
+								onChange={(volume) => setDraft((d) => ({ ...d, sfx: { volume } }))}
+							/>
+						) : null}
+					</div>
 				</Section>
 			</fieldset>
 

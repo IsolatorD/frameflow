@@ -1,3 +1,5 @@
+import { formatLufs } from "@frameflow/core/audio/loudness";
+import { DEFAULT_SFX_VOLUME } from "@frameflow/core/audio/sfx";
 import {
 	FREE_STYLE,
 	resolveVisualStyle,
@@ -155,7 +157,7 @@ export function VideoPage() {
 	const settings = useMemo(() => {
 		if (!video.data) return null;
 		const value = videoSettingsFromStoryboard(video.data.storyboard);
-		return { ...value, visualStyle: value.visualStyle ?? FREE_STYLE };
+		return { ...value, visualStyle: value.visualStyle ?? FREE_STYLE, sfx: value.sfx ?? null };
 	}, [video.data]);
 	// Memorizado: el editor de subtítulos reinicia su borrador cuando cambian las escenas.
 	const captionScenes = useMemo(
@@ -408,6 +410,7 @@ export function VideoPage() {
 									}
 									wordsPerPageRange={WORDS_PER_PAGE_RANGE}
 									volumeRange={MUSIC_VOLUME_RANGE}
+									defaultSfxVolume={DEFAULT_SFX_VOLUME}
 									onDirtyChange={setSettingsDirty}
 									saving={actions.saveSettings.isPending}
 									serverError={actions.saveSettings.error?.message}
@@ -665,6 +668,9 @@ export function VideoPage() {
 										<p className="text-xs text-zinc-400">
 											MP4 de la versión {data.render.versionNumber}
 											{data.render.sizeBytes ? ` · ${formatBytes(data.render.sizeBytes)}` : ""}
+											{data.render.loudnessLufs !== null
+												? ` · volumen ${formatLufs(data.render.loudnessLufs)}`
+												: ""}
 											{renderIsCurrent(data) ? "" : " (desactualizado)"}
 										</p>
 										<div className="flex gap-2">

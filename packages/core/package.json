@@ -27,6 +27,8 @@
 		"./publish": "./src/publish/publish.ts",
 		"./look": "./src/look/looks.ts",
 		"./look/palette": "./src/look/palette.ts",
+		"./audio/loudness": "./src/audio/loudness.ts",
+		"./audio/sfx": "./src/audio/sfx.ts",
 		"./voice/recording": "./src/voice/recording.ts",
 		"./voice/whisperModel": "./src/voice/whisperModel.ts"
 	},

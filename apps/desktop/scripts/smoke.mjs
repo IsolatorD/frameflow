@@ -351,10 +351,17 @@ try {
 	await page.locator("#video-cta").fill("Suscríbete a Astroinfo");
 	await page.getByRole("button", { name: "+ Añadir música" }).click();
 	await page.getByText("♪ test-music.wav").waitFor();
-	await page.getByLabel("Volumen").fill("0.3");
+	await page.getByLabel("Volumen", { exact: true }).fill("0.3");
+	// Efectos de sonido: se activan y aparecen como pista en la línea de tiempo.
+	await page.getByRole("switch", { name: "Efectos de sonido" }).check({ force: true });
+	await page.getByLabel("Volumen de los efectos").waitFor();
 	await page.getByRole("button", { name: "Guardar ajustes" }).click();
 	await page.getByText(/versión 4/).waitFor();
 	await page.getByRole("button", { name: /♪ test-music\.wav/ }).waitFor(); // clip en la línea de tiempo
+	await page
+		.getByRole("button", { name: /Barrido/ })
+		.first()
+		.waitFor();
 	await page.locator('[data-look="scale-zoom"]').first().waitFor();
 	await page.screenshot({ path: join(shots, "11a-viaje-de-escala.png") });
 	await page.waitForTimeout(500);
@@ -656,6 +663,8 @@ try {
 
 		await page.getByRole("button", { name: "Crear video (MP4)" }).click();
 		await page.getByRole("button", { name: "Ver video" }).waitFor({ timeout: 600_000 });
+		// El MP4 sale masterizado para redes (−14 LUFS, con un margen de medida).
+		await page.getByText(/volumen −1[34],\d LUFS/).waitFor();
 		await page.waitForTimeout(500);
 		await page.screenshot({ path: join(shots, "12-video-listo.png") });
 

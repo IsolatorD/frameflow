@@ -93,18 +93,8 @@ algunos fotogramas: la app lo avisa antes de analizar.
 
 ## Sonido
 
-- **Masterizado del export a −14 LUFS** (pico real ≤ −2 dBFS), el volumen que esperan las redes.
-  Medir con el `ebur128` de ffmpeg (Remotion ya lo trae) y ajustar la mezcla de voz y música.
-  Mostrar los LUFS en «Publicar».
-  _Idea: teardown (`sfx/loudness.py`) y skill `sonido`._
-- **Efectos de sonido sutiles:**
-  - pop al aparecer una cifra;
-  - transición entre escenas;
-  - tecleo en textos que se escriben.
-
-  Activables por video. El pico de cada efecto se cuadra con el fotograma del impacto (inicio =
-  fotograma ÷ fps − tiempo del pico). Un acento por momento, nunca por palabra.
-  _Muestras CC0 de Freesound (lista en `sfx/samples/SOURCES.md` de teardown); incluir sus créditos._
+- [x] **Masterizado a −14 LUFS** y **efectos de sonido** (v0.5.0, `docs/11-sonido.md`).
+- **Más efectos:** tecleo en los textos que se escriben, efectos propios de cada estilo visual.
 - **Cortes al ritmo de la música:** detectar los golpes (tempo, compases, el «drop») y ajustar los
   cambios de escena al golpe más cercano. _Idea: `sims/beats.py` de teardown._
 

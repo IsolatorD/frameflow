@@ -143,6 +143,8 @@ export const renders = sqliteTable("renders", {
 	sizeBytes: integer("size_bytes"),
 	width: integer("width"),
 	height: integer("height"),
+	/** Sonoridad final tras masterizar (LUFS); null si no tiene sonido o es anterior a 0.5.0. */
+	loudnessLufs: real("loudness_lufs"),
 	startedAt: text("started_at"),
 	finishedAt: text("finished_at"),
 	error: text("error"),

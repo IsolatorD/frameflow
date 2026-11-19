@@ -1,0 +1,1 @@
+ALTER TABLE `renders` ADD `loudness_lufs` real;

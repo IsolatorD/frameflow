@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SFX, SFX_VOLUME_RANGE, sfxEvents } from "../audio/sfx";
 import { resolveVisualStyle, type VisualStyle, visualStyleSchema } from "../look/looks";
 import type { VideoFormat } from "../storyboard/scenes";
 import {
@@ -85,6 +86,9 @@ export type MusicSettings = {
 	fadeOut: number;
 };
 
+/** Efectos de sonido sutiles (ver core/audio/sfx): activados con un volumen común. */
+export type SfxSettings = { volume: number };
+
 export const MUSIC_VOLUME_RANGE = { min: 0, max: 1, step: 0.05 } as const;
 /** Volumen inicial de la música: por debajo de la voz. */
 export const DEFAULT_MUSIC_VOLUME = 0.15;
@@ -97,6 +101,7 @@ const TRACK_IDS = {
 	voice: "track-voice",
 	music: "track-music",
 	cta: "track-cta",
+	sfx: "track-sfx",
 } as const;
 
 const sameWords = (a: string, b: string) =>
@@ -123,6 +128,16 @@ const currentVoice = (
 	if (!clip?.words || !sameWords(clip.words.map((w) => w.text).join(" "), narration))
 		return undefined;
 	return { src: clip.src, duration: clip.duration, words: clip.words };
+};
+
+const sfxTrackOf = (sb: Storyboard | undefined) =>
+	sb?.tracks.find((t) => t.kind === "audio" && t.id === TRACK_IDS.sfx);
+
+const sfxOf = (sb: Storyboard | undefined): SfxSettings | null => {
+	const track = sfxTrackOf(sb);
+	if (!track) return null;
+	const clip = track.clips[0] as AudioClip | undefined;
+	return { volume: clip?.volume ?? 0.4 };
 };
 
 const musicOf = (sb: Storyboard | undefined): MusicSettings | null => {
@@ -215,6 +230,8 @@ export const assembleStoryboard = (input: {
 	voices?: Readonly<Record<string, SceneVoice>>;
 	/** Undefined = conservar la del storyboard anterior; null = quitarla. */
 	music?: MusicSettings | null;
+	/** Efectos de sonido. Undefined = como en el storyboard anterior; null = sin efectos. */
+	sfx?: SfxSettings | null;
 	previous?: Storyboard;
 	fps?: number;
 }): Storyboard => {
@@ -353,6 +370,51 @@ export const assembleStoryboard = (input: {
 		});
 	}
 
+	// Efectos: se recolocan siempre según las escenas (si cambian los tiempos, los efectos los siguen).
+	const sfx = input.sfx === undefined ? sfxOf(input.previous) : input.sfx;
+	if (sfx) {
+		const ctaClip = tracks.find((t) => t.id === TRACK_IDS.cta)?.clips[0];
+		const clips: AudioClip[] = sfxEvents(scenes, ctaClip)
+			.map((event, i) => {
+				const def = SFX[event.kind];
+				const start = Math.max(0, event.at - def.peak);
+				return {
+					type: "audio" as const,
+					id: `sfx-${i + 1}`,
+					start,
+					duration: Math.min(def.duration, total - start),
+					src: def.file,
+					label: def.label,
+					trimStart: 0,
+					role: "sfx" as const,
+					volume: sfx.volume,
+					fadeIn: 0,
+					fadeOut: 0,
+					loop: false,
+				};
+			})
+			.filter((c) => c.duration > 0.05);
+		// En una pista no puede haber clips solapados: si un efecto pisa al siguiente, se recorta
+		// con un fundido muy corto (su cola ya es casi silencio).
+		clips.forEach((c, i) => {
+			const next = clips[i + 1];
+			if (next && c.start + c.duration > next.start) {
+				c.duration = Math.max(0.02, next.start - c.start);
+				c.fadeOut = Math.min(0.03, c.duration / 2);
+			}
+		});
+		const previousTrack = sfxTrackOf(input.previous);
+		tracks.push({
+			kind: "audio",
+			id: TRACK_IDS.sfx,
+			name: "Efectos",
+			hidden: false,
+			locked: false,
+			muted: previousTrack?.kind === "audio" ? previousTrack.muted : false,
+			clips,
+		});
+	}
+
 	// Pistas que no genera el guion (capas libres del editor) se conservan, recortadas al video:
 	// si el guion se acorta, una capa no puede alargarlo con pantalla vacía.
 	const generated = new Set<string>(Object.values(TRACK_IDS));
@@ -406,6 +468,8 @@ export type VideoSettings = {
 	visualStyle?: VisualStyle;
 	ctaText: string;
 	music: MusicSettings | null;
+	/** Efectos de sonido (null = sin efectos). Opcional al aplicar: sin él se conservan. */
+	sfx?: SfxSettings | null;
 };
 
 export const videoSettingsFromStoryboard = (sb: Storyboard): VideoSettings => ({
@@ -413,6 +477,7 @@ export const videoSettingsFromStoryboard = (sb: Storyboard): VideoSettings => ({
 	visualStyle: resolveVisualStyle(sb.style.visualStyle),
 	ctaText: ctaOf(sb),
 	music: musicOf(sb),
+	sfx: sfxOf(sb),
 });
 
 export const videoSettingsSchema = z.object({
@@ -429,6 +494,10 @@ export const videoSettingsSchema = z.object({
 			fadeOut: z.number().min(0).max(10),
 		})
 		.nullable(),
+	sfx: z
+		.object({ volume: z.number().min(SFX_VOLUME_RANGE.min).max(SFX_VOLUME_RANGE.max) })
+		.nullable()
+		.optional(),
 });
 
 /** Aplica los ajustes del video conservando guion, voces y demás ediciones. */
@@ -447,6 +516,7 @@ export const applyVideoSettings = (sb: Storyboard, input: VideoSettings): Storyb
 		},
 		ctaText: settings.ctaText,
 		music: settings.music,
+		sfx: settings.sfx,
 		previous: sb,
 	});
 };
