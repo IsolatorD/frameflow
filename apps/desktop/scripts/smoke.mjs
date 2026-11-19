@@ -260,7 +260,16 @@ try {
 		.first()
 		.click();
 	await page.getByLabel("¿De qué trata el video?").fill("Por qué el cielo es azul");
-	await page.getByText("Paso a paso", { exact: true }).click();
+	// Estructura: por defecto «Libre»; se ofrecen las plantillas (p. ej. «Paso a paso»).
+	expect(
+		(await page.locator("#video-template").inputValue()) === "libre",
+		"La estructura por defecto debería ser Libre",
+	);
+	expect(
+		(await page.locator("#video-template option").allTextContents()).includes("Historia"),
+		"Debería ofrecerse la plantilla Historia",
+	);
+	await page.locator('input[name="video-mode"][value="stepwise"]').check({ force: true });
 	await page.screenshot({ path: join(shots, "9-nuevo-video.png") });
 	await page.getByRole("button", { name: "Crear video" }).click();
 	await page.getByRole("heading", { level: 1, name: "Por qué el cielo es azul" }).waitFor();
@@ -904,6 +913,12 @@ try {
 		await page.getByLabel("Paso 2", { exact: true }).fill("Piensa en la luz");
 		await page.getByRole("button", { name: "+ Paso" }).click();
 		await page.getByLabel("Paso 3", { exact: true }).fill("Comparte el dato");
+		// Con cinco pasos y una narración corta, la escena no da tiempo a leerlos: se avisa.
+		await page.getByRole("button", { name: "+ Paso" }).click();
+		await page.getByLabel("Paso 4", { exact: true }).fill("Busca un día de lluvia");
+		await page.getByRole("button", { name: "+ Paso" }).click();
+		await page.getByLabel("Paso 5", { exact: true }).fill("Y mira con el sol detrás");
+		await page.getByText("Poco tiempo para leer").waitFor();
 		await page.getByRole("button", { name: "Guardar guion" }).click();
 		await page.getByRole("button", { name: /3 · 1\. Mira al cielo/ }).waitFor();
 		await page.waitForTimeout(500);

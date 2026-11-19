@@ -31,6 +31,8 @@ export const createVideoInputSchema = z.object({
 		.min(TARGET_SECONDS_RANGE.min)
 		.max(TARGET_SECONDS_RANGE.max)
 		.default(60),
+	/** Plantilla de estructura (ver core/script/templates). */
+	template: z.string().default("libre"),
 });
 export type CreateVideoInput = z.input<typeof createVideoInputSchema>;
 

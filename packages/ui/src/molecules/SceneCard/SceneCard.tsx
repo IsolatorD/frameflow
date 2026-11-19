@@ -25,6 +25,7 @@ export function SceneCard({
 	onMove,
 	onRemove,
 	estimate,
+	readingWarning,
 	disabled = false,
 	defaultTheme,
 	extraTimeRange,
@@ -54,6 +55,7 @@ export function SceneCard({
 					Escena {index + 1}
 					<span className="text-xs font-normal text-zinc-500">≈ {estimate}</span>
 					{voiced === false ? <Badge tone="warning">Sin voz</Badge> : null}
+					{readingWarning ? <Badge tone="warning">Poco tiempo para leer</Badge> : null}
 					{recorded ? <Badge tone="info">Voz grabada</Badge> : null}
 				</span>
 				<div className="flex gap-1">
@@ -99,6 +101,7 @@ export function SceneCard({
 				</div>
 			</div>
 
+			{readingWarning ? <p className="-mt-1 text-xs text-amber-300/90">{readingWarning}</p> : null}
 			<TextField
 				id={`${id}-narration`}
 				label="Narración"

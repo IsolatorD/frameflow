@@ -6,6 +6,7 @@ import { estimateSeconds } from "./script";
 
 // Prueba contra un modelo real de Ollama. Solo corre con FRAMEFLOW_LIVE_AI=1 (tarda y necesita el modelo):
 //   FRAMEFLOW_LIVE_AI=1 pnpm --filter @frameflow/core test ai.live
+// (FRAMEFLOW_LIVE_TOPIC y FRAMEFLOW_LIVE_TEMPLATE cambian el tema y la plantilla de estructura)
 const live = process.env.FRAMEFLOW_LIVE_AI === "1";
 // Por defecto, el modelo local recomendado para este equipo (como en la app).
 const model =
@@ -32,6 +33,7 @@ describe.skipIf(!live)("guion con IA real", () => {
 			language: "es",
 			seconds: 45,
 			channel: "Astroinfo",
+			template: process.env.FRAMEFLOW_LIVE_TEMPLATE,
 		});
 		const seconds = script.scenes.reduce((t, s) => t + estimateSeconds(s.narration), 0);
 		console.log(

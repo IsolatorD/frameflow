@@ -120,3 +120,9 @@ function cleanContent(content: ScriptSceneDraft["content"]): ScriptSceneDraft["c
 			};
 	}
 }
+
+/** Aviso si la escena se queda corta para leer su texto (con medio segundo de margen). */
+export const readingWarningFor = (needed: number | undefined, duration: number) =>
+	needed !== undefined && needed > duration + 0.5
+		? `El texto en pantalla necesita unos ${formatSeconds(needed)} para leerse y la escena dura ${formatSeconds(duration)}: añade una pausa después de la voz (Estilo de la escena) o acorta el texto.`
+		: undefined;

@@ -3,7 +3,13 @@ import { Button } from "../../atoms/Button/Button";
 import { TextField } from "../../atoms/TextField/TextField";
 import { SceneCard } from "../../molecules/SceneCard/SceneCard";
 import type { ScriptSceneDraft } from "../../molecules/SceneCard/SceneCardInterface";
-import { cleanScript, formatSeconds, NEW_SCENE, scriptProblems } from "./ScriptEditor.constants";
+import {
+	cleanScript,
+	formatSeconds,
+	NEW_SCENE,
+	readingWarningFor,
+	scriptProblems,
+} from "./ScriptEditor.constants";
 import type { ScriptEditorProps } from "./ScriptEditorInterface";
 
 type Keyed = { key: number; scene: ScriptSceneDraft };
@@ -13,6 +19,7 @@ export function ScriptEditor({
 	value,
 	onSave,
 	estimateSeconds,
+	readingSeconds,
 	onDirtyChange,
 	saving = false,
 	serverError,
@@ -103,6 +110,10 @@ export function ScriptEditor({
 					total={scenes.length}
 					scene={scene}
 					estimate={formatSeconds(
+						estimateSeconds(scene.narration) + (scene.settings?.extraTime ?? 0),
+					)}
+					readingWarning={readingWarningFor(
+						readingSeconds?.(scene.content),
 						estimateSeconds(scene.narration) + (scene.settings?.extraTime ?? 0),
 					)}
 					onChange={(next) => update(key, next)}

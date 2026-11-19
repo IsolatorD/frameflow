@@ -15,6 +15,7 @@ import {
 	videoSettingsFromStoryboard,
 } from "@frameflow/core/script";
 import { updateOverlay } from "@frameflow/core/script/overlays";
+import { readingSeconds } from "@frameflow/core/storyboard";
 import { KEYFRAME_TOLERANCE, setKeyframeEasing } from "@frameflow/core/storyboard/keyframes";
 import { findClip } from "@frameflow/core/storyboard/timeline";
 import { Badge } from "@frameflow/ui/src/atoms/Badge/Badge";
@@ -372,6 +373,7 @@ export function VideoPage() {
 								<ScriptEditor
 									value={script}
 									estimateSeconds={estimateSeconds}
+									readingSeconds={readingSeconds}
 									onSave={(next) => actions.saveScript.mutate(next)}
 									onDirtyChange={setScriptDirty}
 									saving={actions.saveScript.isPending}

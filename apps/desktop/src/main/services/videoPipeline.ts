@@ -12,7 +12,6 @@ import {
 	type Script,
 	scriptFromStoryboard,
 	scriptSchema,
-	starterScript,
 	type VideoSettings,
 	voicedSceneIds,
 } from "@frameflow/core/script";
@@ -25,6 +24,7 @@ import {
 } from "@frameflow/core/script/edit";
 import { applyOverlayOp, type OverlayOp } from "@frameflow/core/script/overlays";
 import { reviewScript as reviewWithAi, type ScriptReview } from "@frameflow/core/script/review";
+import { scriptTemplate } from "@frameflow/core/script/templates";
 import type { Storyboard } from "@frameflow/core/storyboard";
 import {
 	type CreateVideoInput,
@@ -164,6 +164,7 @@ export function createVideoPipeline(deps: Deps) {
 			tone: project.brandKit.tone,
 			language: video.language,
 			seconds: targetSeconds.get(video.id) ?? 60,
+			template: templates.get(video.id),
 			channel: project.name,
 			signal,
 			onStage: (stage) =>
@@ -292,6 +293,7 @@ export function createVideoPipeline(deps: Deps) {
 
 	// Duración objetivo pedida al crear (solo la necesita la IA, no se guarda).
 	const targetSeconds = new Map<string, number>();
+	const templates = new Map<string, string>();
 
 	return {
 		aiStatus: async (): Promise<LlmStatus> => (await deps.llm()).status(),
@@ -312,7 +314,7 @@ export function createVideoPipeline(deps: Deps) {
 				if (!status.available) throw new Error(`${status.reason} Usa el modo paso a paso.`);
 			}
 			const storyboard = assembleStoryboard({
-				script: starterScript(data.topic),
+				script: scriptTemplate(data.template).starter(data.topic),
 				language: data.language,
 				format: data.format,
 				style: videoStyleFromBrandKit(project.brandKit),
@@ -328,6 +330,7 @@ export function createVideoPipeline(deps: Deps) {
 			});
 			if (data.mode === "auto") {
 				targetSeconds.set(video.id, data.targetSeconds);
+				templates.set(video.id, data.template);
 				// Automático: guion → voz → video, sin pararse a revisar.
 				runJob(video.id, "script", async (signal, progress) => {
 					const scripted = await writeScript(video, project, signal, progress);

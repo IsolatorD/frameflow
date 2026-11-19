@@ -147,3 +147,51 @@ export type SceneV1 = z.infer<typeof sceneSchema>;
 
 export const dimensionsFor = (format: VideoFormat) =>
 	format === "9:16" ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+
+/** Palabras que hay que leer en pantalla. */
+const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).length;
+
+/**
+ * Segundos que hacen falta para leer lo que hay en pantalla: 1 s por bloque más 0,25 s por cada
+ * palabra a partir de la tercera (regla de teardown, MIT), más lo que tardan en entrar las listas
+ * (0,4 s por elemento) o en rodar una cifra. Una escena que dure menos se lee a medias.
+ */
+export function readingSeconds(content: SceneContent): number {
+	const read = (text: string) => 1 + 0.25 * Math.max(0, wordsOf(text) - 3);
+	const listed = (texts: string[], title?: string) =>
+		(title ? 0.3 : 0) + 0.25 + (texts.length - 1) * 0.4 + read(texts.join(" ")) * 0.75;
+	let seconds: number;
+	switch (content.type) {
+		case "kinetic-text":
+			seconds =
+				0.35 * (content.lines.length - 1) + read(content.lines.map((l) => l.text).join(" "));
+			break;
+		case "stat":
+			seconds = 1.2 + read(content.label);
+			break;
+		case "steps":
+			seconds = listed(content.items, content.title);
+			break;
+		case "timeline":
+			seconds = listed(
+				content.events.map((e) => `${e.when} ${e.label}`),
+				content.title,
+			);
+			break;
+		case "compare":
+			seconds = listed(
+				content.items.map((c) => `${c.label} ${c.detail ?? ""}`),
+				content.title,
+			);
+			break;
+		case "chart":
+			seconds =
+				0.8 +
+				listed(
+					content.bars.map((b) => b.label),
+					content.title,
+				);
+			break;
+	}
+	return Math.round(seconds * 10) / 10;
+}

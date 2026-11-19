@@ -2,6 +2,7 @@ import { z } from "zod";
 import { modelLabel } from "../ai/catalog";
 import { isCopiedLine, REPEAT_THRESHOLD, similarity } from "./quality";
 import { type Script, sceneRange, scriptSchema, WORDS_PER_SECOND } from "./script";
+import { type ScriptTemplate, scriptTemplate } from "./templates";
 
 // Generación del guion con un LLM. El proveedor es intercambiable: Ollama aquí; Claude, OpenAI y
 // Gemini en src/ai/providers.
@@ -152,8 +153,16 @@ type LlmScript = z.infer<ReturnType<typeof llmOutput>>;
  * Se piden una vez; si el modelo no lo consigue, se usa el mejor intento válido.
  * Hacerlas obligatorias hundía la fiabilidad (evaluación en docs/04-guion-ia.md).
  */
-export const softProblems = (out: LlmScript, seconds: number): string[] => {
+export const softProblems = (
+	out: LlmScript,
+	seconds: number,
+	template?: ScriptTemplate,
+): string[] => {
 	const problems: string[] = [];
+	if (template?.requires && !out.scenes.some((s) => s.visual === template.requires))
+		problems.push(
+			`La estructura «${template.name}» pide una escena "${template.requires}"; conviértelo en una escena de ese tipo donde encaje.`,
+		);
 	const words = out.scenes.reduce((t, s) => t + s.narration.trim().split(/\s+/).length, 0);
 	const estimated = Math.round(words / WORDS_PER_SECOND);
 	if (estimated < seconds * DURATION_TOLERANCE.min)
@@ -233,6 +242,7 @@ export const scriptSystemPrompt = (opts: {
 	language: string;
 	seconds: number;
 	channel?: string;
+	template?: ScriptTemplate;
 }) => {
 	const [min, max] = sceneRange(opts.seconds);
 	return `Eres guionista de videos verticales informativos para TikTok, Reels y Shorts${
@@ -267,7 +277,11 @@ Reglas:
 - Cada escena aporta algo nuevo: no repitas un dato ni una idea que ya dijiste.
 - Las "lines" resumen la idea de su narración con otras palabras; no copies trozos de la frase.
 - Solo hechos verificables y ampliamente aceptados. Si no estás seguro de una cifra, no la uses.
-Ejemplo de la forma (sobre otro tema, más corto):
+${
+	opts.template?.guide
+		? `Estructura del video («${opts.template.name}»), síguela escena a escena:\n${opts.template.guide}\n`
+		: ""
+}Ejemplo de la forma (sobre otro tema, más corto):
 ${EXAMPLE}
 
 Responde solo con el JSON pedido.`;
@@ -400,6 +414,7 @@ async function askScript(
 	schema: ReturnType<typeof llmOutput>,
 	seconds: number,
 	options: LlmOptions,
+	template?: ScriptTemplate,
 ): Promise<{ script: Script; attempts: number; softProblems: string[] }> {
 	let lastProblem = "";
 	let best: { script: Script; softProblems: string[] } | null = null;
@@ -409,7 +424,7 @@ async function askScript(
 		let feedback: string;
 		try {
 			const out = schema.parse(JSON.parse(raw));
-			const soft = softProblems(out, seconds);
+			const soft = softProblems(out, seconds, template);
 			if (!best || soft.length < best.softProblems.length)
 				best = { script: fromLlm(out), softProblems: soft };
 			if (soft.length === 0 || softRetries >= SOFT_RETRIES) {
@@ -458,6 +473,8 @@ export type GenerateScriptOptions = {
 	language: string;
 	seconds: number;
 	channel?: string;
+	/** Plantilla de estructura (ver templates.ts); sin ella, libre. */
+	template?: string;
 	signal?: AbortSignal;
 	quality?: ScriptQualityOptions;
 	onStage?: (stage: "draft" | "review") => void;
@@ -471,17 +488,19 @@ export async function generateScriptWithStats(
 	const quality = { ...DEFAULT_SCRIPT_QUALITY, ...opts.quality };
 	const schema = llmOutput(sceneRange(opts.seconds));
 	const options: LlmOptions = { signal: opts.signal, think: quality.think };
+	const template = scriptTemplate(opts.template);
 
 	opts.onStage?.("draft");
 	const draft = await askScript(
 		llm,
 		[
-			{ role: "system", content: scriptSystemPrompt(opts) },
+			{ role: "system", content: scriptSystemPrompt({ ...opts, template }) },
 			{ role: "user", content: `Tema del video: ${opts.topic}` },
 		],
 		schema,
 		opts.seconds,
 		options,
+		template,
 	);
 	if (!quality.review)
 		return {

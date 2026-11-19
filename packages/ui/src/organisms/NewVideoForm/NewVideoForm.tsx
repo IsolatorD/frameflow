@@ -13,6 +13,7 @@ const formatDuration = (s: number) =>
 export function NewVideoForm({
 	languages,
 	secondsRange,
+	templates,
 	ai,
 	onOpenAiSettings,
 	onSubmit,
@@ -24,7 +25,9 @@ export function NewVideoForm({
 		language: languages[0]?.value ?? "es",
 		targetSeconds: 60,
 		mode: "stepwise",
+		template: templates[0]?.value ?? "libre",
 	});
+	const template = templates.find((t) => t.value === values.template);
 	const [error, setError] = useState<string>();
 	const set = <K extends keyof NewVideoValues>(key: K, value: NewVideoValues[K]) => {
 		setValues((v) => ({ ...v, [key]: value }));
@@ -71,6 +74,14 @@ export function NewVideoForm({
 					onChange={(v) => set("targetSeconds", v)}
 				/>
 			</div>
+			<SelectField
+				id="video-template"
+				label="Estructura"
+				value={values.template}
+				options={templates}
+				onChange={(v) => set("template", v)}
+				hint={template?.description}
+			/>
 			<fieldset className="flex flex-col gap-2">
 				<legend className="mb-2 text-sm font-medium text-zinc-200">¿Cómo lo hacemos?</legend>
 				<div className="grid grid-cols-2 gap-3">

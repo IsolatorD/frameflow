@@ -1,16 +1,19 @@
 # Hoja de ruta
 
 > 2026-11-19 · lo pendiente, con las ideas tomadas de otros repositorios. Se actualiza al cerrar o
-> añadir trabajo. Última versión publicada: **v0.3.0** (voz grabada por escena y estilo Viaje de
-> escala).
+> añadir trabajo. Última versión publicada: **v0.5.0**.
 
-## Próxima versión (v0.4.0)
+## Versiones publicadas
 
-Candidatos, en este orden:
+- **v0.3.0:** voz grabada por escena; estilo Viaje de escala.
+- **v0.4.0:** estilo Pictogramas; «Revisar guion» con IA.
+- **v0.5.0:** colores desde una referencia; masterizado a −14 LUFS y efectos de sonido; tipos de
+  escena nuevos (pasos, línea de tiempo, comparación, gráfico).
 
-- [x] Estilo **Pictogramas** (Pictogram Motion, `docs/08-estilos.md`).
-- [x] **«Revisar guion» con IA** (`docs/04-guion-ia.md`).
-- [x] **Estilo desde una referencia**, fase 1: colores (ver abajo).
+## Próxima versión (v0.6.0)
+
+- [x] Plantillas de estructura y aviso de tiempo de lectura.
+- [ ] Dibujo propio de los tipos de escena nuevos en cada estilo.
 
 ## Estilo desde una referencia
 
@@ -56,14 +59,8 @@ algunos fotogramas: la app lo avisa antes de analizar.
   Pocos cambios de alto impacto, conservando la voz del autor. Sin notas numéricas ni promesas de
   viralidad. Usa los proveedores de IA que ya hay.
   _Idea: skill `cuestionar-guion` de [skills-videos-cortos](https://github.com/JustCarlos30/skills-videos-cortos) (MIT)._
-- **Plantillas de estructura** para el guion con IA. Por ejemplo:
-  - negocio: problema → qué hago → cómo funciona en 3 pasos → una prueba → nombre;
-  - dato curioso: pregunta → respuesta sorprendente → por qué → cierre;
-  - lista, línea de tiempo y comparación.
-
-  _Idea: estructuras repetidas en [awesome-opus5-5-videos](https://github.com/yihui-dev/awesome-opus5-5-videos)._
-- **Aviso de tiempo de lectura:** una escena debe durar al menos 1 s más 0,25 s por cada palabra a
-  partir de la cuarta. Aviso en el editor si no llega. _Idea: regla de [teardown](https://github.com/elvarofficial/teardown) (MIT)._
+- [x] **Plantillas de estructura** (v0.6.0, `docs/04-guion-ia.md`).
+- [x] **Aviso de tiempo de lectura** (v0.6.0, `docs/12-tipos-de-escena.md`).
 
 ## Escenas y estilos
 

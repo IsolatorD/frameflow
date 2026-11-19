@@ -29,6 +29,17 @@ Textos de hasta 40 caracteres (el cuándo de un hito, 16), pensados para leerse 
   nuevos se dibujan **encima de su fondo, sobre una placa** del color de fondo de la marca para que
   se lean. Pendiente: un dibujo propio en cada estilo (p. ej. el gráfico como barras holográficas).
 
+## Tiempo de lectura
+
+Cada escena calcula cuánto se tarda en **leer lo que hay en pantalla** (`readingSeconds` en
+`core/storyboard/scenes.ts`):
+
+- 1 s más 0,25 s por cada palabra a partir de la tercera (regla de teardown);
+- más lo que tardan en entrar los elementos de una lista (0,4 s cada uno) o en rodar una cifra.
+
+Si la escena dura menos (con medio segundo de margen), el editor muestra **«Poco tiempo para
+leer»** y propone añadir una pausa después de la voz o acortar el texto.
+
 ## Editar
 
 En «Guion y escenas» → **En pantalla** se elige el tipo. Al cambiarlo se conservan los textos que se

@@ -10,6 +10,8 @@ export interface ScriptEditorProps {
 	onSave: (script: ScriptDraft) => void;
 	/** Segundos estimados de narración para un texto. */
 	estimateSeconds: (text: string) => number;
+	/** Segundos que hacen falta para leer el contenido en pantalla (sin él, no hay aviso). */
+	readingSeconds?: (content: ScriptSceneDraft["content"]) => number;
 	onDirtyChange?: (dirty: boolean) => void;
 	saving?: boolean;
 	serverError?: string;

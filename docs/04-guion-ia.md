@@ -65,6 +65,25 @@ un equipo de 16 GB). Muestra pequeña: 4 temas, una pasada por modelo.
 - La duración real varía (0,5–1,1× lo pedido); la voz final manda.
 - Para mejores datos: el modelo local 14B o un proveedor en la nube (ver abajo).
 
+## Plantillas de estructura
+
+Al crear un video se elige una **estructura** (`core/script/templates.ts`):
+
+| Plantilla          | Forma                                                            | Pide                |
+| ------------------ | ---------------------------------------------------------------- | ------------------- |
+| Libre              | La IA elige                                                      | —                   |
+| Dato curioso       | Pregunta → respuesta sorprendente → porqué → cierre              | una cifra           |
+| Paso a paso        | Problema → pasos → paso clave → resultado                        | una escena de pasos |
+| Lista              | Anuncio con el número → lista → un elemento por escena → cierre  | pasos               |
+| Historia           | Gancho → línea de tiempo → momento clave → hoy                   | línea de tiempo     |
+| Comparación        | ¿A o B? → frente a frente → dato decisivo → veredicto            | comparación         |
+| Negocio o producto | Problema → solución → cómo funciona en 3 pasos → prueba → nombre | pasos               |
+
+- **Modo automático:** la guía de la plantilla va en el prompt, escena a escena. Si la plantilla
+  pide un tipo de escena y la IA no lo usa, se le pide **una vez** como mejora (no bloquea).
+- **Modo paso a paso:** el guion inicial ya trae esa forma (p. ej. «Paso a paso» empieza con una
+  escena de pasos para rellenar).
+
 ## Revisar guion con IA
 
 En «Guion y escenas», **Revisar guion** pide a la IA elegida en Ajustes que lea el guion **guardado**

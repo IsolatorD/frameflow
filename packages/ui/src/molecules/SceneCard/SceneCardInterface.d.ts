@@ -43,6 +43,8 @@ export interface SceneCardProps {
 	onRemove: () => void;
 	/** Duración estimada de la narración, ya formateada ("4,2 s"). */
 	estimate: string;
+	/** Aviso si la escena dura menos de lo que se tarda en leer su texto en pantalla. */
+	readingWarning?: string;
 	disabled?: boolean;
 	/** Colores del video, para empezar a personalizar desde ellos. */
 	defaultTheme: { accent: string; background: string };

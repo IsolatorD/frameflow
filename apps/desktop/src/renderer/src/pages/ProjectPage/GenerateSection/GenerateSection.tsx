@@ -1,5 +1,6 @@
 import type { ProjectWithBrand, SUPPORTED_LANGUAGES } from "@frameflow/core/project";
 import { TARGET_SECONDS_RANGE } from "@frameflow/core/script";
+import { SCRIPT_TEMPLATES } from "@frameflow/core/script/templates";
 import { NewVideoForm } from "@frameflow/ui/src/organisms/NewVideoForm/NewVideoForm";
 import { useNavigate } from "react-router";
 import { useAiStatus } from "../../../hooks/useAiStatus/useAiStatus";
@@ -21,6 +22,11 @@ export function GenerateSection({ project }: { project: ProjectWithBrand }) {
 		<NewVideoForm
 			languages={project.languages.map((code) => ({ value: code, label: LANGUAGE_NAMES[code] }))}
 			secondsRange={TARGET_SECONDS_RANGE}
+			templates={SCRIPT_TEMPLATES.map((t) => ({
+				value: t.id,
+				label: t.name,
+				description: t.description,
+			}))}
 			ai={
 				ai.data
 					? ai.data.available
