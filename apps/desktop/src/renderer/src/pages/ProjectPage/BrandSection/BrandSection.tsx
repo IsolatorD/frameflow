@@ -12,6 +12,7 @@ import { BrandKitEditor } from "@frameflow/ui/src/organisms/BrandKitEditor/Brand
 import { useMemo, useState } from "react";
 import { useBlocker } from "react-router";
 import { useUpdateBrandKit } from "../../../hooks/useUpdateBrandKit/useUpdateBrandKit";
+import { paletteFromFile } from "../../../utils/referencePalette/referencePalette";
 import { editorLanguages, fontOptions } from "./BrandSection.constants";
 
 /** Sección "Marca y estilo": editor del BrandKit + aviso si sales con cambios sin guardar. */
@@ -36,6 +37,7 @@ export function BrandSection({ project }: { project: ProjectWithBrand }) {
 				wordsPerPageRange={WORDS_PER_PAGE_RANGE}
 				parseHashtags={normalizeHashtags}
 				getWarnings={brandThemeWarnings}
+				readReference={paletteFromFile}
 				onSave={(draft) => update.mutate(draft)}
 				onDirtyChange={setDirty}
 				saving={update.isPending}

@@ -195,6 +195,25 @@ try {
 	expect(await save.isDisabled(), "Guardar debería empezar desactivado");
 	expect((await captionWords.count()) === 4, "La vista previa debería mostrar 4 palabras");
 
+	// Colores desde una referencia (la imagen de prueba, rosa y amarilla): se proponen y se usan;
+	// luego se dejan como estaban para el resto de la prueba.
+	const colorKeys = ["background", "text", "accent", "muted"];
+	const colorsBefore = await Promise.all(
+		colorKeys.map((k) => page.locator(`#brand-color-${k}`).inputValue()),
+	);
+	await page.getByLabel("Elegir una imagen o un video de referencia").setInputFiles(testImage);
+	await page.getByRole("button", { name: "Usar estos colores" }).waitFor();
+	await page.getByRole("img", { name: /^Paleta de la referencia/ }).waitFor();
+	await page.screenshot({ path: join(shots, "7a-colores-referencia.png") });
+	await page.getByRole("button", { name: "Usar estos colores" }).click();
+	const colorsAfter = await Promise.all(
+		colorKeys.map((k) => page.locator(`#brand-color-${k}`).inputValue()),
+	);
+	expect(colorsAfter[0] !== colorsBefore[0], "El fondo debería tomar un color de la referencia");
+	await status.getByText("Cambios sin guardar").waitFor();
+	for (const [i, k] of colorKeys.entries())
+		await page.locator(`#brand-color-${k}`).fill(colorsBefore[i]);
+
 	await accent.fill("#12");
 	await page.getByText("Usa 6 dígitos hexadecimales").waitFor();
 	expect(await save.isDisabled(), "Un color inválido no debe poder guardarse");

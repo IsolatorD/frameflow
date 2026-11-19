@@ -10,7 +10,7 @@ Candidatos, en este orden:
 
 - [x] Estilo **Pictogramas** (Pictogram Motion, `docs/08-estilos.md`).
 - [x] **«Revisar guion» con IA** (`docs/04-guion-ia.md`).
-- [ ] **Estilo desde una referencia**, fase 1 (ver abajo).
+- [x] **Estilo desde una referencia**, fase 1: colores (ver abajo).
 
 ## Estilo desde una referencia
 
@@ -20,16 +20,21 @@ lo que ya existe: colores, fuente, estilo del catálogo y ritmo. No se genera un
 imágenes de la referencia no pasan al video. Las propuestas se aplican al proyecto (marca) o solo al
 video, y se pueden revisar antes.
 
-1. **Colores y tipografía** (local, sin IA):
-   - paleta dominante de la imagen o de varios fotogramas del video (agrupar colores);
-   - propuesta de fondo, texto y acento, comprobando el contraste;
-   - la fuente más parecida entre las disponibles (por rasgos: con o sin serifa, grosor, ancho).
+1. ✅ **Colores** (local, sin IA; desde v0.5.0, en Marca y estilo → Colores → «Desde una
+   referencia»):
+   - paleta dominante de la imagen o de 8 fotogramas del video (k-means, `core/look/palette.ts`);
+   - propuesta de fondo, texto, acento y secundario, comprobando el contraste (el acento no se
+     deforma: si para llegar a 3:1 cambiaría demasiado, se usa otro).
+   - Pendiente: aplicarlo solo a un video (ahora va a la marca).
+   - La **tipografía** pasa a la fase 3: reconocer una fuente en una imagen necesita leer el texto
+     (IA de visión); sin eso, la propuesta sería una adivinanza.
 2. **Ritmo** (local, con lo que ya hay):
    - detectar los cortes del video (diferencia entre fotogramas) → duración media de las escenas;
    - transcribir la voz con Whisper → palabras por segundo, duración del gancho y estructura;
    - usarlo en las duraciones de las escenas y como plantilla para el guion con IA.
 3. **Análisis con IA de visión:**
    - describir el estilo (técnica, fondo, composición, tratamiento del texto, personaje guía…);
+   - la fuente más parecida entre las disponibles (con o sin serifa, grosor, ancho);
    - elegir el estilo del catálogo más parecido y sus opciones, y decir si se parece a uno de la
      cola aún sin portar;
    - con Claude, OpenAI o Gemini (clave del usuario) o con un modelo local de visión, que sería otra

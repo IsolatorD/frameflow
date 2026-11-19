@@ -6,6 +6,7 @@ import { SelectField } from "../../atoms/SelectField/SelectField";
 import { SwitchField } from "../../atoms/SwitchField/SwitchField";
 import { TextField } from "../../atoms/TextField/TextField";
 import { BrandPreview } from "../../molecules/BrandPreview/BrandPreview";
+import { ReferenceColors } from "../../molecules/ReferenceColors/ReferenceColors";
 import { Section } from "../../molecules/Section/Section";
 import { VisualStylePicker } from "../../molecules/VisualStylePicker/VisualStylePicker";
 import {
@@ -28,6 +29,7 @@ export function BrandKitEditor({
 	wordsPerPageRange,
 	parseHashtags,
 	getWarnings,
+	readReference,
 	onSave,
 	onDirtyChange,
 	saving = false,
@@ -86,6 +88,13 @@ export function BrandKitEditor({
 							/>
 						))}
 					</div>
+					{readReference ? (
+						<ReferenceColors
+							id="brand-reference"
+							onRead={readReference}
+							onUse={(theme) => set("theme", theme)}
+						/>
+					) : null}
 					{warnings.length > 0 ? (
 						<ul className="mt-4 flex flex-col gap-1 rounded-lg bg-amber-400/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-400/30">
 							{warnings.map((w) => (

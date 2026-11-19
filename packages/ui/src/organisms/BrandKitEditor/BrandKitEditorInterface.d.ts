@@ -1,5 +1,6 @@
 import type { SelectOption } from "../../atoms/SelectField/SelectFieldInterface";
 import type { BrandPreviewTheme } from "../../molecules/BrandPreview/BrandPreviewInterface";
+import type { ReferenceColorsResult } from "../../molecules/ReferenceColors/ReferenceColorsInterface";
 import type {
 	VisualStyleChoice,
 	VisualStyleValue,
@@ -40,6 +41,8 @@ export interface BrandKitEditorProps {
 	wordsPerPageRange: { min: number; max: number };
 	/** Convierte el texto libre de hashtags en la lista final. */
 	parseHashtags: (text: string) => string[];
+	/** Lee una imagen o video de referencia; sin él no se ofrece «Desde una referencia». */
+	readReference?: (file: File) => Promise<ReferenceColorsResult>;
 	/** Avisos de legibilidad del tema (no bloquean el guardado). */
 	getWarnings?: (theme: BrandPreviewTheme) => string[];
 	onSave: (draft: BrandKitDraft) => void;
