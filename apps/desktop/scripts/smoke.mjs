@@ -896,6 +896,18 @@ try {
 		);
 		await page.getByRole("button", { name: "Cerrar" }).first().click();
 		await page.getByRole("button", { name: "Revisar guion", exact: true }).waitFor();
+
+		// Tipos de escena: la escena 3 pasa a «Pasos» con dos pasos; se guarda y se ve en la línea
+		// de tiempo y en la vista previa.
+		await page.getByLabel("En pantalla").nth(2).selectOption("steps");
+		await page.getByLabel("Paso 1", { exact: true }).fill("Mira al cielo");
+		await page.getByLabel("Paso 2", { exact: true }).fill("Piensa en la luz");
+		await page.getByRole("button", { name: "+ Paso" }).click();
+		await page.getByLabel("Paso 3", { exact: true }).fill("Comparte el dato");
+		await page.getByRole("button", { name: "Guardar guion" }).click();
+		await page.getByRole("button", { name: /3 · 1\. Mira al cielo/ }).waitFor();
+		await page.waitForTimeout(500);
+		await page.screenshot({ path: join(shots, "11g-escena-pasos.png") });
 	}
 
 	// Volver al listado desde la barra lateral.

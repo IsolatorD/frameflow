@@ -3,7 +3,7 @@
 Estudio de escritorio para crear y gestionar canales de videos animados cortos: cada **proyecto es un
 canal** con su marca, sus videos, sus cuentas sociales y sus estadísticas.
 
-Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md) · [docs/07-exportar.md](docs/07-exportar.md) · [docs/08-estilos.md](docs/08-estilos.md) · [docs/09-voz-grabada.md](docs/09-voz-grabada.md) · [docs/10-hoja-de-ruta.md](docs/10-hoja-de-ruta.md) · [docs/11-sonido.md](docs/11-sonido.md)
+Documentación de diseño: [docs/01-vision.md](docs/01-vision.md) · [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) · [docs/03-storyboard-v2.md](docs/03-storyboard-v2.md) · [docs/04-guion-ia.md](docs/04-guion-ia.md) · [docs/05-voz.md](docs/05-voz.md) · [docs/06-distribucion.md](docs/06-distribucion.md) · [docs/07-exportar.md](docs/07-exportar.md) · [docs/08-estilos.md](docs/08-estilos.md) · [docs/09-voz-grabada.md](docs/09-voz-grabada.md) · [docs/10-hoja-de-ruta.md](docs/10-hoja-de-ruta.md) · [docs/11-sonido.md](docs/11-sonido.md) · [docs/12-tipos-de-escena.md](docs/12-tipos-de-escena.md)
 
 ## Estructura
 

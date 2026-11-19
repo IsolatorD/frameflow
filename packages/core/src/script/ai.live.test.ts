@@ -13,7 +13,7 @@ const model =
 	defaultLocalModel(systemInfoFrom({ platform: platform(), arch: arch(), totalBytes: totalmem() }));
 
 describe.skipIf(!live)("guion con IA real", () => {
-	it("escribe un guion válido de unos 45 s en español", { timeout: 300_000 }, async () => {
+	it("escribe un guion válido de unos 45 s en español", { timeout: 900_000 }, async () => {
 		const ollama = new OllamaProvider(model);
 		expect(await ollama.status()).toMatchObject({ available: true });
 		let attempts = 0;

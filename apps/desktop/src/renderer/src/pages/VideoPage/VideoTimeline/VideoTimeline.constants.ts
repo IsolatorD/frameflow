@@ -2,6 +2,7 @@ import { CTA_SECONDS_RANGE, EXTRA_TIME_RANGE } from "@frameflow/core/script";
 import { sceneMinDuration, type TimelineEdit } from "@frameflow/core/script/edit";
 import { isOverlayTrack, type OverlayOp, overlayLimits } from "@frameflow/core/script/overlays";
 import type { Clip, SceneClip, Storyboard } from "@frameflow/core/storyboard";
+import { sceneSummary } from "@frameflow/core/storyboard";
 import type { TimelineTrack } from "@frameflow/ui/src/organisms/Timeline/TimelineInterface";
 
 /** Qué representa cada clip de la línea de tiempo, para saber qué abrir al pulsarlo. */
@@ -36,10 +37,7 @@ export const timelineTracks = (
 				switch (clip.type) {
 					case "scene": {
 						sceneNumber++;
-						const text =
-							clip.content.type === "stat"
-								? `${clip.content.value}${clip.content.suffix ?? ""}`
-								: clip.content.lines.map((l) => l.text).join(" ");
+						const text = sceneSummary(clip.content);
 						return {
 							id: clip.id,
 							start: clip.start,

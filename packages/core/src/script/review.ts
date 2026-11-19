@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SCENE_KIND_LABELS, sceneSummary } from "../storyboard/scenes";
 import { LIMITS, type LlmMessage, type LlmOptions, type LlmProvider, MAX_ATTEMPTS } from "./ai";
 import type { Script } from "./script";
 
@@ -164,10 +165,13 @@ Responde solo con el JSON.`;
 export const scriptForReview = (topic: string, script: Script) =>
 	`Tema del video: ${topic}\nTítulo: ${script.title}\n\n${script.scenes
 		.map((scene, i) => {
+			const c = scene.content;
 			const visual =
-				scene.content.type === "stat"
-					? `cifra en pantalla: ${scene.content.value}${scene.content.suffix ?? ""} — ${scene.content.label}`
-					: `texto en pantalla: ${scene.content.lines.map((l) => `«${l.text}»`).join(" / ")}`;
+				c.type === "stat"
+					? `cifra en pantalla: ${c.value}${c.suffix ?? ""} — ${c.label}`
+					: c.type === "kinetic-text"
+						? `texto en pantalla: ${c.lines.map((l) => `«${l.text}»`).join(" / ")}`
+						: `${SCENE_KIND_LABELS[c.type].toLowerCase()} en pantalla: ${sceneSummary(c)}`;
 			return `Escena ${i + 1} (${visual})\nNarración: ${scene.narration}`;
 		})
 		.join("\n\n")}`;
@@ -234,12 +238,7 @@ export async function reviewScript(
 	throw new Error(`La IA no produjo una revisión válida tras ${MAX_ATTEMPTS} intentos: ${last}`);
 }
 
-type SceneLike = {
-	narration: string;
-	content:
-		| { type: "kinetic-text"; lines: { text: string; emphasis?: boolean }[] }
-		| { type: "stat"; value: number; suffix?: string; label: string };
-};
+type SceneLike = { narration: string; content: { type: string } };
 
 /** ¿La propuesta se puede aplicar con un clic? */
 export const canApply = (s: ReviewSuggestion) =>
@@ -258,9 +257,10 @@ export function applySuggestion<T extends { scenes: SceneLike[] }>(
 			return {
 				...scene,
 				narration: s.narration ?? scene.narration,
+				// El texto en pantalla solo se cambia en escenas de texto (las demás conservan su contenido).
 				content:
 					s.lines && scene.content.type === "kinetic-text"
-						? { ...scene.content, lines: s.lines }
+						? { ...scene.content, type: "kinetic-text", lines: s.lines }
 						: scene.content,
 			};
 		}),

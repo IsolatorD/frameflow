@@ -3,7 +3,16 @@ import { Button } from "../../atoms/Button/Button";
 import { SelectField } from "../../atoms/SelectField/SelectField";
 import { TextField } from "../../atoms/TextField/TextField";
 import { SceneStyleFields } from "../SceneStyleFields/SceneStyleFields";
-import { convertContent, MAX_LINES, SCENE_TYPES } from "./SceneCard.constants";
+import {
+	convertContent,
+	ITEM_COLUMNS,
+	ITEMS,
+	type ItemRow,
+	MAX_LINES,
+	rowsOf,
+	SCENE_TYPES,
+	withRows,
+} from "./SceneCard.constants";
 import type { SceneCardProps, SceneContentDraft } from "./SceneCardInterface";
 
 /** Una escena del guion: lo que dice la voz y lo que se ve. */
@@ -169,7 +178,7 @@ export function SceneCard({
 							</Button>
 						) : null}
 					</div>
-				) : (
+				) : content.type === "stat" ? (
 					<div className="grid grid-cols-[1fr_1fr_2fr] gap-3">
 						<TextField
 							id={`${id}-value`}
@@ -194,6 +203,8 @@ export function SceneCard({
 							onChange={(label) => setContent({ ...content, label })}
 						/>
 					</div>
+				) : (
+					<ItemsEditor id={id} content={content} onChange={setContent} />
 				)}
 			</div>
 			<details className="group rounded-xl bg-white/[0.02] ring-1 ring-white/5">
@@ -212,5 +223,96 @@ export function SceneCard({
 				</div>
 			</details>
 		</fieldset>
+	);
+}
+
+type ListContent = Extract<SceneContentDraft, { type: "steps" | "timeline" | "compare" | "chart" }>;
+
+/** Editor de pasos, hitos, lados de la comparación o barras del gráfico. */
+function ItemsEditor({
+	id,
+	content,
+	onChange,
+}: {
+	id: string;
+	content: ListContent;
+	onChange: (content: SceneContentDraft) => void;
+}) {
+	const cols = ITEM_COLUMNS[content.type];
+	const rows = rowsOf(content);
+	const fixed = content.type === "compare";
+	const setRows = (next: ItemRow[]) => onChange(withRows(content, next));
+	const setRow = (i: number, patch: Partial<ItemRow>) =>
+		setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+	return (
+		<div className="flex flex-col gap-2">
+			<div className={content.type === "chart" ? "grid grid-cols-[2fr_1fr] gap-3" : ""}>
+				<TextField
+					id={`${id}-title`}
+					label="Título (opcional)"
+					value={content.title ?? ""}
+					maxLength={40}
+					onChange={(title) => onChange({ ...content, title: title || undefined })}
+				/>
+				{content.type === "chart" ? (
+					<TextField
+						id={`${id}-chart-suffix`}
+						label="Unidad"
+						placeholder=" km"
+						value={content.suffix ?? ""}
+						maxLength={8}
+						onChange={(suffix) => onChange({ ...content, suffix })}
+					/>
+				) : null}
+			</div>
+			{rows.map((row, i) => (
+				<div
+					// biome-ignore lint/suspicious/noArrayIndexKey: los elementos no tienen id; se editan en su posición
+					key={i}
+					className="flex items-end gap-2"
+				>
+					<div className={cols.b ? (cols.numeric ? "flex-[2]" : "w-36 shrink-0") : "flex-1"}>
+						<TextField
+							id={`${id}-item-${i}-a`}
+							label={`${cols.a} ${i + 1}`}
+							value={row.a}
+							maxLength={content.type === "timeline" ? 16 : 40}
+							onChange={(a) => setRow(i, { a })}
+						/>
+					</div>
+					{cols.b ? (
+						<div className="flex-1">
+							<TextField
+								id={`${id}-item-${i}-b`}
+								label={cols.b}
+								value={row.b}
+								maxLength={40}
+								onChange={(b) => setRow(i, { b })}
+							/>
+						</div>
+					) : null}
+					{fixed ? null : (
+						<Button
+							variant="ghost"
+							aria-label={`Quitar ${cols.item} ${i + 1}`}
+							disabled={rows.length <= ITEMS.min}
+							onClick={() => setRows(rows.filter((_, j) => j !== i))}
+							className="px-2"
+						>
+							✕
+						</Button>
+					)}
+				</div>
+			))}
+			{!fixed && rows.length < ITEMS.max ? (
+				<Button
+					variant="ghost"
+					className="self-start"
+					onClick={() => setRows([...rows, { a: "", b: "" }])}
+				>
+					+ {cols.item.charAt(0).toUpperCase() + cols.item.slice(1)}
+				</Button>
+			) : null}
+		</div>
 	);
 }

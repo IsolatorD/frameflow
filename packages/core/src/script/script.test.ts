@@ -438,3 +438,102 @@ describe("efectos de sonido", () => {
 		expect(off.tracks.some((t) => t.id === "track-sfx")).toBe(false);
 	});
 });
+
+describe("guion con IA: pasos, línea de tiempo, comparación y gráfico", () => {
+	const listScene = (visual: string, items: { label: string; value: string }[], extra = {}) => ({
+		narration: "Esta escena explica algo con varios elementos en pantalla.",
+		visual,
+		lines: [],
+		value: 0,
+		suffix: "",
+		label: "Título",
+		items,
+		...extra,
+	});
+	const answer = (...scenes: unknown[]) =>
+		JSON.stringify({
+			title: "La luz",
+			scenes: [
+				textScene("¿Sabías que la luz del Sol es del pasado?", "Luz antigua"),
+				...scenes,
+				...(scenes.length < 2
+					? [textScene("Cada vez que miras al cielo, miras al pasado.", "Viaje en el tiempo")]
+					: []),
+			],
+		});
+	const opts = { topic: "luz", tone: "curioso", language: "es", seconds: 10 };
+
+	it("convierte cada tipo en su contenido", async () => {
+		const script = await generateScript(
+			fakeLlm([
+				answer(
+					listScene("pasos", [
+						{ label: "Sale del Sol", value: "" },
+						{ label: "Cruza el espacio", value: "" },
+					]),
+					listScene(
+						"grafico",
+						[
+							{ label: "Luna", value: "1,3" },
+							{ label: "Sol", value: "499" },
+						],
+						{ suffix: " s" },
+					),
+				),
+			]),
+			opts,
+		);
+		expect(script.scenes[1]?.content).toEqual({
+			type: "steps",
+			title: "Título",
+			items: ["Sale del Sol", "Cruza el espacio"],
+		});
+		expect(script.scenes[2]?.content).toEqual({
+			type: "chart",
+			title: "Título",
+			suffix: " s",
+			bars: [
+				{ label: "Luna", value: 1.3 },
+				{ label: "Sol", value: 499 },
+			],
+		});
+	});
+
+	it("devuelve los errores: comparación de tres, gráfico sin números y línea sin fecha", async () => {
+		const llm = fakeLlm([
+			answer(
+				listScene("comparacion", [
+					{ label: "A", value: "" },
+					{ label: "B", value: "" },
+					{ label: "C", value: "" },
+				]),
+				listScene("grafico", [
+					{ label: "Luna", value: "poco" },
+					{ label: "Sol", value: "499" },
+				]),
+			),
+			answer(
+				listScene("linea", [
+					{ label: "Primer telescopio", value: "" },
+					{ label: "Llegada a la Luna", value: "1969" },
+				]),
+			),
+			answer(
+				listScene("linea", [
+					{ label: "Primer telescopio", value: "1609" },
+					{ label: "Llegada a la Luna", value: "1969" },
+				]),
+			),
+		]);
+		const script = await generateScript(llm, opts);
+		const feedback = JSON.stringify(llm.lastMessages);
+		expect(llm.calls).toBe(3);
+		expect(feedback).toContain("exactamente 2 elementos");
+		expect(feedback).toContain("es un número");
+		expect(feedback).toContain("el cuándo");
+		expect(script.scenes[1]?.content).toMatchObject({
+			type: "timeline",
+			events: [{ when: "1609" }, { when: "1969" }],
+		});
+	});
+});

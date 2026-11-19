@@ -37,12 +37,27 @@ const TECHNICAL_WORDS = /^(kinetic-text|stat|texto|cifra|narration|narración|ga
 
 const llmScene = z.object({
 	narration: z.string().min(1),
-	visual: z.enum(["texto", "cifra"]),
+	visual: z.enum(["texto", "cifra", "pasos", "linea", "comparacion", "grafico"]),
 	lines: z.array(z.object({ text: z.string(), emphasis: z.boolean() })),
 	value: z.number(),
 	suffix: z.string(),
 	label: z.string(),
+	/** Elementos de pasos, línea de tiempo, comparación y gráfico (vacío en texto y cifra). */
+	items: z.array(z.object({ label: z.string(), value: z.string() })).default([]),
 });
+
+/** Cuántos elementos admite cada tipo con elementos. */
+const ITEM_RANGE = { pasos: [2, 4], linea: [2, 4], comparacion: [2, 2], grafico: [2, 5] } as const;
+const isListVisual = (v: string): v is keyof typeof ITEM_RANGE => v in ITEM_RANGE;
+/** "1.200,5" o "1200.5" → 1200.5 (los valores de un gráfico llegan como texto). */
+const parseAmount = (text: string) => {
+	const clean = text.trim().replace(/\s/g, "");
+	const normalized = /,\d{1,2}$/.test(clean)
+		? clean.replace(/\./g, "").replace(",", ".")
+		: clean.replace(/,/g, "");
+	const n = Number.parseFloat(normalized);
+	return Number.isFinite(n) ? n : null;
+};
 
 export const LIMITS = { line: 30, lines: 3, title: 60, suffix: 8, label: 40 } as const;
 /** Margen aceptado sobre la duración pedida (la IA no cuenta palabras con precisión). */
@@ -81,6 +96,33 @@ const llmOutput = (range: [number, number]) =>
 					problem(i, "escribe los números de la narración con letras.");
 				if (scene.visual === "texto" && !scene.lines.some((l) => l.text.trim()))
 					problem(i, 'una escena "texto" necesita de 1 a 3 líneas con texto.');
+				if (isListVisual(scene.visual)) {
+					const [min, max] = ITEM_RANGE[scene.visual];
+					const items = scene.items.filter((it) => it.label.trim());
+					if (items.length < min || items.length > max)
+						problem(
+							i,
+							min === max
+								? `una escena "${scene.visual}" necesita exactamente ${min} elementos en "items".`
+								: `una escena "${scene.visual}" necesita de ${min} a ${max} elementos en "items".`,
+						);
+					for (const it of items) {
+						if (it.label.length > LIMITS.label)
+							problem(
+								i,
+								`el elemento "${it.label}" es demasiado largo (máx. ${LIMITS.label} caracteres).`,
+							);
+						if (scene.visual === "linea" && !it.value.trim())
+							problem(
+								i,
+								'en una "linea", cada elemento necesita "value" con el cuándo (año, siglo, hora…).',
+							);
+						if (scene.visual === "linea" && it.value.length > 16)
+							problem(i, 'en una "linea", "value" es el cuándo, corto (máx. 16 caracteres).');
+						if (scene.visual === "grafico" && parseAmount(it.value) === null)
+							problem(i, `en un "grafico", "value" es un número ("${it.value}" no lo es).`);
+					}
+				}
 				if (scene.visual === "cifra") {
 					if (!scene.label.trim() || TECHNICAL_WORDS.test(scene.label.trim()))
 						problem(i, 'en una escena "cifra", "label" es una frase corta que explica el número.');
@@ -88,6 +130,13 @@ const llmOutput = (range: [number, number]) =>
 						problem(i, 'una escena "cifra" necesita un número real en "value".');
 				}
 			});
+			if (out.scenes.filter((s) => s.visual !== "texto" && s.visual !== "cifra").length > 2)
+				ctx.addIssue({
+					code: "custom",
+					message:
+						'Usa "pasos", "linea", "comparacion" o "grafico" como mucho en dos escenas; el resto, "texto" (y "cifra" si hay datos).',
+					path: ["scenes"],
+				});
 			if (out.scenes.every((s) => s.visual === "cifra"))
 				ctx.addIssue({
 					code: "custom",
@@ -149,6 +198,7 @@ const EXAMPLE = JSON.stringify({
 			value: 0,
 			suffix: "",
 			label: "",
+			items: [],
 		},
 		{
 			narration: "Cada litro de agua de mar lleva unos treinta y cinco gramos de sal disuelta.",
@@ -157,6 +207,21 @@ const EXAMPLE = JSON.stringify({
 			value: 35,
 			suffix: " g",
 			label: "de sal por litro",
+			items: [],
+		},
+		{
+			narration:
+				"La lluvia disuelve minerales de las rocas, los ríos los arrastran y en el mar se quedan cuando el agua se evapora.",
+			visual: "pasos",
+			lines: [],
+			value: 0,
+			suffix: "",
+			label: "Cómo llega la sal",
+			items: [
+				{ label: "La lluvia disuelve rocas", value: "" },
+				{ label: "Los ríos la arrastran", value: "" },
+				{ label: "El sol evapora el agua", value: "" },
+			],
 		},
 	],
 });
@@ -188,6 +253,16 @@ Reglas:
   - "cifra" (solo cuando la escena gira en torno a un número): "value" es el número en cifras,
     "suffix" su unidad corta (" min", "%", " km"…; puede ser "") y "label" una frase corta que
     explica la cifra. Deja "lines": [].
+- Otros visuales, solo si la escena encaja de verdad (como mucho dos escenas de estos tipos):
+  - "pasos": un proceso o una lista; "items" son 2 a 4 pasos MUY cortos ("label"; "value": "");
+    "label" de la escena es un título corto o "".
+  - "linea": algo que cambió con el tiempo; "items" son 2 a 4 hitos: "value" el cuándo ("1969",
+    "hace 4.500 millones de años") y "label" qué pasó.
+  - "comparacion": dos cosas frente a frente; "items" son exactamente 2: "label" cada una y "value"
+    un detalle corto que las diferencie (o "").
+  - "grafico": varias cantidades comparables; "items" son 2 a 5 barras: "label" y "value" el número
+    en cifras; "suffix" la unidad; "label" de la escena es el título del gráfico.
+  En "texto" y "cifra", deja "items": [].
 - Usa "cifra" en una o dos escenas si el tema tiene datos numéricos; el resto, "texto".
 - Cada escena aporta algo nuevo: no repitas un dato ni una idea que ya dijiste.
 - Las "lines" resumen la idea de su narración con otras palabras; no copies trozos de la frase.
@@ -200,53 +275,114 @@ Responde solo con el JSON pedido.`;
 
 export const MAX_ATTEMPTS = 3;
 
+type LlmScene = LlmScript["scenes"][number];
+
+const contentFromLlm = (scene: LlmScene): Script["scenes"][number]["content"] => {
+	const items = scene.items.filter((it) => it.label.trim());
+	const title = scene.label.trim() || undefined;
+	switch (scene.visual) {
+		case "cifra":
+			return {
+				type: "stat",
+				value: scene.value,
+				suffix: scene.suffix || undefined,
+				label: scene.label,
+			};
+		case "pasos":
+			return { type: "steps", title, items: items.map((it) => it.label.trim()) };
+		case "linea":
+			return {
+				type: "timeline",
+				title,
+				events: items.map((it) => ({ when: it.value.trim(), label: it.label.trim() })),
+			};
+		case "comparacion":
+			return {
+				type: "compare",
+				title,
+				items: items.map((it) => ({
+					label: it.label.trim(),
+					detail: it.value.trim() || undefined,
+				})),
+			};
+		case "grafico":
+			return {
+				type: "chart",
+				title,
+				suffix: scene.suffix || undefined,
+				bars: items.map((it) => ({ label: it.label.trim(), value: parseAmount(it.value) ?? 0 })),
+			};
+		default:
+			return {
+				type: "kinetic-text",
+				lines: scene.lines
+					.filter((l) => l.text.trim())
+					.map((l) => (l.emphasis ? l : { text: l.text })),
+			};
+	}
+};
+
 const fromLlm = (out: LlmScript): Script =>
 	scriptSchema.parse({
 		title: out.title,
-		scenes: out.scenes.map((scene) =>
-			scene.visual === "cifra"
-				? {
-						narration: scene.narration,
-						content: {
-							type: "stat",
-							value: scene.value,
-							suffix: scene.suffix || undefined,
-							label: scene.label,
-						},
-					}
-				: {
-						narration: scene.narration,
-						content: {
-							type: "kinetic-text",
-							lines: scene.lines
-								.filter((l) => l.text.trim())
-								.map((l) => (l.emphasis ? l : { text: l.text })),
-						},
-					},
-		),
+		scenes: out.scenes.map((scene) => ({
+			narration: scene.narration,
+			content: contentFromLlm(scene),
+		})),
 	});
 
 const toLlm = (script: Script) => ({
 	title: script.title,
-	scenes: script.scenes.map((scene) =>
-		scene.content.type === "stat"
-			? {
-					narration: scene.narration,
-					visual: "cifra",
-					lines: [],
-					value: scene.content.value,
-					suffix: scene.content.suffix ?? "",
-					label: scene.content.label,
-				}
-			: {
-					narration: scene.narration,
+	scenes: script.scenes.map((scene) => {
+		const c = scene.content;
+		const base = {
+			narration: scene.narration,
+			lines: [],
+			value: 0,
+			suffix: "",
+			label: "",
+			items: [],
+		};
+		switch (c.type) {
+			case "stat":
+				return { ...base, visual: "cifra", value: c.value, suffix: c.suffix ?? "", label: c.label };
+			case "steps":
+				return {
+					...base,
+					visual: "pasos",
+					label: c.title ?? "",
+					items: c.items.map((label) => ({ label, value: "" })),
+				};
+			case "timeline":
+				return {
+					...base,
+					visual: "linea",
+					label: c.title ?? "",
+					items: c.events.map((e) => ({ label: e.label, value: e.when })),
+				};
+			case "compare":
+				return {
+					...base,
+					visual: "comparacion",
+					label: c.title ?? "",
+					items: c.items.map((it) => ({ label: it.label, value: it.detail ?? "" })),
+				};
+			case "chart":
+				return {
+					...base,
+					visual: "grafico",
+					label: c.title ?? "",
+					suffix: c.suffix ?? "",
+					items: c.bars.map((b) => ({ label: b.label, value: String(b.value) })),
+				};
+			default:
+				return {
+					...base,
 					visual: "texto",
-					lines: scene.content.lines.map((l) => ({ text: l.text, emphasis: Boolean(l.emphasis) })),
-					value: 0,
-					suffix: "",
-					label: "",
-				},
-	),
+					lines: c.lines.map((l) => ({ text: l.text, emphasis: Boolean(l.emphasis) })),
+				};
+		}
+	}),
 });
 
 const isAborted = (options: LlmOptions) => Boolean(options.signal?.aborted);

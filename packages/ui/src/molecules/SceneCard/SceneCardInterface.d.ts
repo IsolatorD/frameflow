@@ -5,7 +5,11 @@ export interface ScriptLineDraft {
 
 export type SceneContentDraft =
 	| { type: "kinetic-text"; lines: ScriptLineDraft[] }
-	| { type: "stat"; value: number; suffix?: string; label: string };
+	| { type: "stat"; value: number; suffix?: string; label: string }
+	| { type: "steps"; title?: string; items: string[] }
+	| { type: "timeline"; title?: string; events: { when: string; label: string }[] }
+	| { type: "compare"; title?: string; items: { label: string; detail?: string }[] }
+	| { type: "chart"; title?: string; suffix?: string; bars: { label: string; value: number }[] };
 
 export type TransitionDraft = "none" | "fade" | "slide-up" | "pop";
 

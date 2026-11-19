@@ -162,7 +162,10 @@ function drawScene(ctx: Ctx, s: FrameState, index: number, t: number) {
 		? { x: 0.5 * W, y: 0.27 * H, r: 0.34 * W }
 		: { x: 0.72 * W, y: 0.5 * H, r: 0.37 * H };
 	const pop = G.E.oBack(G.inv(0, 0.45, lt));
-	stageDisc(ctx, disc.x, disc.y, disc.r * (0.92 + 0.08 * pop), P.t[0], lt);
+	// Las escenas de pasos, línea de tiempo, comparación o gráfico se dibujan encima (en placa):
+	// aquí solo queda la trama de fondo.
+	const own = sc?.content.type === "stat" || sc?.content.type === "kinetic-text";
+	if (own) stageDisc(ctx, disc.x, disc.y, disc.r * (0.92 + 0.08 * pop), P.t[0], lt);
 	const accent = accentOf(P);
 	const text = portrait
 		? { x: 0.08 * W, y: 0.55 * H, w: 0.84 * W, px: 118 * u }
@@ -173,7 +176,7 @@ function drawScene(ctx: Ctx, s: FrameState, index: number, t: number) {
 		const c = sc.content;
 		statDisc(ctx, disc, c, s.language, lt, P, accent, u);
 		titleLines(ctx, [{ text: c.label }], text, text.px * 0.55, lt, P.fg, accent, meta, u);
-	} else if (sc) {
+	} else if (sc?.content.type === "kinetic-text") {
 		const picto = PICTOS[index % PICTOS.length] as Picto;
 		ctx.save();
 		ctx.translate(disc.x, disc.y);

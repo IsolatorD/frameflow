@@ -1,6 +1,7 @@
 import type { Theme, VisualClip } from "@frameflow/core/storyboard";
 import { AbsoluteFill, Img, OffthreadVideo, useVideoConfig } from "remotion";
 import { KineticText } from "../scenes/KineticText";
+import { Chart, Compare, Steps, Timeline } from "../scenes/ListScenes";
 import { Stat } from "../scenes/Stat";
 import { ClipLayer } from "./ClipLayer";
 import { useResolveSrc } from "./resolveSrc";
@@ -10,17 +11,28 @@ const themeColor = (value: string, theme: Theme) =>
 	value in theme ? theme[value as keyof Theme] : value;
 
 // Registro tipo de clip → componente. Añadir un tipo nuevo = añadir un caso.
-const Content = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => {
+const Content = ({ clip, theme, plate }: { clip: VisualClip; theme: Theme; plate: boolean }) => {
 	const { fps } = useVideoConfig();
 	const resolveSrc = useResolveSrc();
 	switch (clip.type) {
 		case "scene": {
 			const sceneTheme = { ...theme, ...clip.theme };
-			return clip.content.type === "kinetic-text" ? (
-				<KineticText content={clip.content} theme={sceneTheme} />
-			) : (
-				<Stat content={clip.content} theme={sceneTheme} />
-			);
+			const c = clip.content;
+			switch (c.type) {
+				case "kinetic-text":
+					return <KineticText content={c} theme={sceneTheme} />;
+				case "stat":
+					return <Stat content={c} theme={sceneTheme} />;
+				case "steps":
+					return <Steps content={c} theme={sceneTheme} plate={plate} />;
+				case "timeline":
+					return <Timeline content={c} theme={sceneTheme} plate={plate} />;
+				case "compare":
+					return <Compare content={c} theme={sceneTheme} plate={plate} />;
+				case "chart":
+					return <Chart content={c} theme={sceneTheme} plate={plate} />;
+			}
+			return null;
 		}
 		case "text":
 			return (
@@ -64,7 +76,16 @@ const Content = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => {
 	}
 };
 
-export const VisualClipView = ({ clip, theme }: { clip: VisualClip; theme: Theme }) => (
+/** `plate`: la escena se dibuja encima de un estilo visual (fondo transparente y placa). */
+export const VisualClipView = ({
+	clip,
+	theme,
+	plate = false,
+}: {
+	clip: VisualClip;
+	theme: Theme;
+	plate?: boolean;
+}) => (
 	<ClipLayer
 		clipId={clip.id}
 		transform={clip.transform}
@@ -72,6 +93,6 @@ export const VisualClipView = ({ clip, theme }: { clip: VisualClip; theme: Theme
 		enter={clip.enter}
 		exit={clip.exit}
 	>
-		<Content clip={clip} theme={theme} />
+		<Content clip={clip} theme={theme} plate={plate} />
 	</ClipLayer>
 );

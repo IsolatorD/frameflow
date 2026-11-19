@@ -215,7 +215,8 @@ function drawFrame(
 			boundary !== null ? eio(seg(t, boundary - DIVE.before - 0.3, boundary - DIVE.before)) : 0;
 		const label = `${COPY[language].stop} ${String(index + 1).padStart(2, "0")} · ${stopOf(index, n, journey).name[language].toUpperCase()}`;
 		if (scene.content.type === "stat") statBlock(L, t - tIn, out, scene.content, language, label);
-		else textBlock(L, t - tIn, out, scene.content.lines, label);
+		else if (scene.content.type === "kinetic-text")
+			textBlock(L, t - tIn, out, scene.content.lines, label);
 	}
 }
 

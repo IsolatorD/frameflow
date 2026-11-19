@@ -47,8 +47,55 @@ export const statContent = z.object({
 	label: z.string(),
 });
 
-export const sceneContentSchema = z.discriminatedUnion("type", [kineticTextContent, statContent]);
+/** Límites de los tipos de escena con varios elementos (pensados para leerse en un móvil). */
+export const SCENE_LIMITS = {
+	items: { min: 2, max: 5 },
+	text: 40,
+	title: 40,
+} as const;
 
+const short = z.string().trim().min(1).max(SCENE_LIMITS.text);
+const title = z.string().trim().max(SCENE_LIMITS.title).optional();
+const many = <T extends z.ZodTypeAny>(item: T) =>
+	z.array(item).min(SCENE_LIMITS.items.min).max(SCENE_LIMITS.items.max);
+
+/** Pasos o lista numerada ("cómo funciona en 3 pasos"). */
+export const stepsContent = z.object({ type: z.literal("steps"), title, items: many(short) });
+
+/** Línea de tiempo: cuándo y qué pasó. */
+export const timelineContent = z.object({
+	type: z.literal("timeline"),
+	title,
+	events: many(z.object({ when: z.string().trim().min(1).max(16), label: short })),
+});
+
+/** Comparación A vs B, con un detalle opcional de cada lado. */
+export const compareContent = z.object({
+	type: z.literal("compare"),
+	title,
+	items: z
+		.array(z.object({ label: short, detail: z.string().trim().max(SCENE_LIMITS.text).optional() }))
+		.length(2),
+});
+
+/** Gráfico de barras con su unidad. */
+export const chartContent = z.object({
+	type: z.literal("chart"),
+	title,
+	suffix: z.string().max(8).optional(),
+	bars: many(z.object({ label: short, value: z.number().nonnegative() })),
+});
+
+export const sceneContentSchema = z.discriminatedUnion("type", [
+	kineticTextContent,
+	statContent,
+	stepsContent,
+	timelineContent,
+	compareContent,
+	chartContent,
+]);
+
+/** Escenas v1: solo existían texto y cifra. */
 export const sceneSchema = z.discriminatedUnion("type", [
 	kineticTextContent.extend(sceneBase),
 	statContent.extend(sceneBase),
@@ -60,6 +107,41 @@ export type VideoFormat = z.infer<typeof formatSchema>;
 export type SceneContent = z.infer<typeof sceneContentSchema>;
 export type KineticTextContent = z.infer<typeof kineticTextContent>;
 export type StatContent = z.infer<typeof statContent>;
+export type StepsContent = z.infer<typeof stepsContent>;
+export type TimelineContent = z.infer<typeof timelineContent>;
+export type CompareContent = z.infer<typeof compareContent>;
+export type ChartContent = z.infer<typeof chartContent>;
+export type SceneKind = SceneContent["type"];
+
+/** Nombre de cada tipo de escena para mostrar. */
+export const SCENE_KIND_LABELS: Record<SceneKind, string> = {
+	"kinetic-text": "Texto animado",
+	stat: "Cifra destacada",
+	steps: "Pasos",
+	timeline: "Línea de tiempo",
+	compare: "Comparación",
+	chart: "Gráfico",
+};
+
+/** Lo que se ve en pantalla, en una línea (línea de tiempo, revisión con IA…). */
+export function sceneSummary(content: SceneContent): string {
+	switch (content.type) {
+		case "kinetic-text":
+			return content.lines.map((l) => l.text).join(" ");
+		case "stat":
+			return `${content.value}${content.suffix ?? ""} — ${content.label}`;
+		case "steps":
+			return content.items.map((t, i) => `${i + 1}. ${t}`).join(" · ");
+		case "timeline":
+			return content.events.map((e) => `${e.when}: ${e.label}`).join(" · ");
+		case "compare":
+			return content.items
+				.map((c) => (c.detail ? `${c.label} (${c.detail})` : c.label))
+				.join(" vs ");
+		case "chart":
+			return content.bars.map((b) => `${b.label} ${b.value}${content.suffix ?? ""}`).join(" · ");
+	}
+}
 /** Escena v1 (contenido + duración + voz). */
 export type SceneV1 = z.infer<typeof sceneSchema>;
 

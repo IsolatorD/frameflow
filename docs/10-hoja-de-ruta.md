@@ -67,14 +67,10 @@ algunos fotogramas: la app lo avisa antes de analizar.
 
 ## Escenas y estilos
 
-- **Nuevos tipos de escena**, además de texto y cifra:
-  - **pasos** (cómo funciona en 3 pasos);
-  - **línea de tiempo**;
-  - **comparación A vs B**;
-  - **gráfico** (barras o línea con varios datos).
-
-  En el catálogo de awesome-opus son de los formatos más pedidos: 185 prompts hablan de datos o
-  gráficos, 46 de procesos, 31 de historia y 10 de comparaciones.
+- [x] **Nuevos tipos de escena:** pasos, línea de tiempo, comparación y gráfico (v0.5.0,
+      `docs/12-tipos-de-escena.md`).
+- **Dibujo propio de los tipos nuevos en cada estilo** (ahora van en placa encima de Holograma,
+  Viaje de escala y Pictogramas).
 - **Cola de estilos de Lemo-Opuscar** (25): ver `docs/08-estilos.md`. Scale Zoom Explainer y
   Pictogram Motion primero; 52 prompts del catálogo piden escala o zoom, lo que confirma la
   prioridad.
