@@ -25,9 +25,24 @@ Textos de hasta 40 caracteres (el cuándo de un hito, 16), pensados para leerse 
   - Gráfico: barras que crecen; la mayor, en el color de acento.
 
   Los elementos entran uno detrás de otro (0,4 s).
-- **Holograma, Viaje de escala y Pictogramas** dibujan ellos mismos el texto y las cifras. Los tipos
-  nuevos se dibujan **encima de su fondo, sobre una placa** del color de fondo de la marca para que
-  se lean. Pendiente: un dibujo propio en cada estilo (p. ej. el gráfico como barras holográficas).
+- **Holograma:** paneles de consola con el texto que se «decodifica»:
+  - pasos numerados «01, 02…»;
+  - línea de tiempo con nodos en un eje;
+  - comparación en dos recuadros con «VS»;
+  - gráfico con barras de neón (la mayor, en el color de énfasis).
+- **Pictogramas:** una tarjeta del tono oscuro de la escena sobre la trama, del alto justo para su
+  contenido:
+  - discos numerados;
+  - hitos sobre una línea;
+  - dos discos frente a frente con un «VS»;
+  - barras redondeadas.
+- **Viaje de escala:** ilustración plana bajo la parada:
+  - círculos amarillos numerados;
+  - una línea de puntos con hitos;
+  - dos tarjetas con «VS»;
+  - barras azules (la mayor, amarilla).
+- Un estilo nuevo puede declarar qué tipos dibuja (`draws` en `looks/index.ts`); los que no, se
+  dibujan encima de su fondo sobre una placa legible.
 
 ## Tiempo de lectura
 

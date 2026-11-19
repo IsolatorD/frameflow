@@ -4,6 +4,7 @@ import { loadFont as loadShareTechMono } from "@remotion/google-fonts/ShareTechM
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { formatValue, type Scene, scenesOf } from "../scenes";
+import { isListContent, listPanel } from "./listPanels";
 import { type HoloModelId, holoModel, isHoloModelId, modelRadius } from "./models";
 import { type Camera, drawPad, drawScanPlane, Holo, type HoloModel } from "./vendor/holo.js";
 import * as U from "./vendor/hud.js";
@@ -246,6 +247,17 @@ function drawFrame(
 		);
 	} else if (scene && scene.content.type === "kinetic-text") {
 		textPanel(ctx, T, scene.content.lines, {
+			x: cardX,
+			y: cardY,
+			w: cardW,
+			k,
+			out,
+			frame: frame24,
+			size: portrait ? 76 : 58,
+			index,
+		});
+	} else if (scene && isListContent(scene.content)) {
+		listPanel(ctx, T, scene.content, {
 			x: cardX,
 			y: cardY,
 			w: cardW,

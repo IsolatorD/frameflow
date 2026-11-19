@@ -13,7 +13,7 @@
 ## Próxima versión (v0.6.0)
 
 - [x] Plantillas de estructura y aviso de tiempo de lectura.
-- [ ] Dibujo propio de los tipos de escena nuevos en cada estilo.
+- [x] Dibujo propio de los tipos de escena nuevos en cada estilo.
 
 ## Estilo desde una referencia
 
@@ -66,8 +66,6 @@ algunos fotogramas: la app lo avisa antes de analizar.
 
 - [x] **Nuevos tipos de escena:** pasos, línea de tiempo, comparación y gráfico (v0.5.0,
       `docs/12-tipos-de-escena.md`).
-- **Dibujo propio de los tipos nuevos en cada estilo** (ahora van en placa encima de Holograma,
-  Viaje de escala y Pictogramas).
 - **Cola de estilos de Lemo-Opuscar** (25): ver `docs/08-estilos.md`. Scale Zoom Explainer y
   Pictogram Motion primero; 52 prompts del catálogo piden escala o zoom, lo que confirma la
   prioridad.

@@ -3,7 +3,9 @@ import { loadFont as loadDMMono } from "@remotion/google-fonts/DMMono";
 import { loadFont as loadInterTight } from "@remotion/google-fonts/InterTight";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { isListContent } from "../hologram/listPanels";
 import { formatValue, type Scene, scenesOf } from "../scenes";
+import { drawListCard } from "./listScenes";
 import { composite, TRANSITIONS } from "./transitions";
 import "./vendor/engine.js";
 import type { Palette, PaletteKey, PictogramEngine } from "./vendor/engine.js";
@@ -184,6 +186,8 @@ function drawScene(ctx: Ctx, s: FrameState, index: number, t: number) {
 		drawPicto(ctx, picto, 0, 0, disc.r, lt, P.fg, accent);
 		ctx.restore();
 		titleLines(ctx, sc.content.lines, text, text.px, lt, P.fg, accent, meta, u);
+	} else if (sc && isListContent(sc.content)) {
+		drawListCard(G, ctx, sc.content, { W, H, lt, P, accent, meta, portrait });
 	}
 	ctx.restore();
 }

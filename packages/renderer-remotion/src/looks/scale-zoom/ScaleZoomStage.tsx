@@ -1,4 +1,4 @@
-import type { Storyboard } from "@frameflow/core/storyboard";
+import type { SceneContent, Storyboard } from "@frameflow/core/storyboard";
 import { loadFont } from "@remotion/google-fonts/Jost";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
@@ -217,6 +217,7 @@ function drawFrame(
 		if (scene.content.type === "stat") statBlock(L, t - tIn, out, scene.content, language, label);
 		else if (scene.content.type === "kinetic-text")
 			textBlock(L, t - tIn, out, scene.content.lines, label);
+		else listBlock(L, t - tIn, out, scene.content, label);
 	}
 }
 
@@ -664,4 +665,204 @@ function statBlock(
 			0,
 			500,
 		);
+}
+
+type ListContent = Exclude<SceneContent, { type: "kinetic-text" } | { type: "stat" }>;
+
+/** Tamaño de letra que cabe en el ancho (como mucho `size`). */
+const fitSize = (text: string, size: number, maxW: number, weight = 700) => {
+	const w = measure(text, size, weight);
+	return w > maxW ? (size * maxW) / w : size;
+};
+
+/**
+ * Pasos, línea de tiempo, comparación y gráfico en ilustración plana: círculos amarillos
+ * numerados, una línea de puntos con hitos, dos tarjetas frente a frente o barras.
+ */
+function listBlock(L: Layout, k: number, out: number, c: ListContent, labelText: string) {
+	if (k < 0) return;
+	const { x, y, w, label: ls } = L.text;
+	const G = g(null);
+	const lk = eo(seg(k, 0, 0.3)) * (1 - out);
+	if (lk > 0) {
+		const lw = measure(labelText, ls, 600) + ls * 4;
+		const C1 = g(G, {
+			"clip-path": clipOf("rect", {
+				x: r1(x - 8),
+				y: r1(y - ls * 1.5),
+				width: r1(lw * lk),
+				height: r1(ls * 2.2),
+			}),
+		});
+		label(C1, x, y, labelText, ls, C.mist, "start", 3);
+	}
+	let yy = y + ls * 1.6;
+	const base = L.portrait ? L.text.size * 0.82 : L.text.size * 0.8;
+	if (c.title) {
+		const ts = fitSize(c.title, base, w);
+		const kk = spr(k, 0.08, 15, 7.5);
+		const CT = g(G, {
+			"clip-path": clipOf("rect", {
+				x: r1(x - 10),
+				y: r1(yy),
+				width: r1(w + 40),
+				height: r1(ts * 1.25 * (1 - out)),
+			}),
+		});
+		label(
+			CT,
+			x,
+			yy + ts * 0.95 + ts * 1.2 * (1 - kk) + ts * 1.2 * out,
+			c.title,
+			ts,
+			C.sun,
+			"start",
+			-1,
+			700,
+		);
+		yy += ts * 1.4;
+	}
+	const at = (i: number) => spr(k, 0.3 + i * 0.4, 14, 7);
+	const visible = (i: number) => Math.min(1, at(i)) * (1 - out);
+	// Alto disponible: la franja de texto (27 % del alto en vertical, 50 % en horizontal).
+	const height = L.portrait ? L.F[1] / 0.28 : L.F[1] / 0.47;
+	const avail = height * (L.portrait ? 0.27 : 0.5) - (yy - y);
+	const P = g(G);
+
+	if (c.type === "steps" || c.type === "timeline") {
+		const items =
+			c.type === "steps"
+				? c.items.map((t, i) => ({ mark: String(i + 1), text: t }))
+				: c.events.map((e) => ({ mark: e.when, text: e.label }));
+		const row = Math.min(base * 1.5, avail / items.length);
+		const r = row * 0.3;
+		if (c.type === "timeline") {
+			const grow = eo(seg(k, 0.25, 0.3 + items.length * 0.4)) * (1 - out);
+			for (let d = 0; d < (items.length - 1) * row * grow; d += 14)
+				el("circle", { cx: r1(x + r), cy: r1(yy + row * 0.5 + d), r: 3, fill: C.mist }, P);
+		}
+		items.forEach((it, i) => {
+			const v = visible(i);
+			const cy = yy + row * 0.5;
+			if (v > 0.01) {
+				if (c.type === "steps") {
+					el("circle", { cx: r1(x + r), cy: r1(cy), r: r1(r * v), fill: C.sun }, P);
+					label(P, x + r, cy + r * 0.4, it.mark, r * 1.1 * v, C.night, "middle", 0, 700);
+					const ts = fitSize(it.text, row * 0.42, w - r * 2 - 24);
+					label(
+						P,
+						x + r * 2 + 24,
+						cy + ts * 0.35 + (1 - v) * 30,
+						it.text,
+						ts,
+						C.cream,
+						"start",
+						-0.5,
+						700,
+					);
+				} else {
+					el("circle", { cx: r1(x + r), cy: r1(cy), r: r1(r * 0.45 * v), fill: C.sun }, P);
+					const tx = x + r * 2 + 18;
+					label(P, tx, cy - row * 0.06 + (1 - v) * 20, it.mark, row * 0.28, C.sun, "start", 0, 700);
+					const ts = fitSize(it.text, row * 0.3, w - (tx - x), 600);
+					label(P, tx, cy + ts * 1.1 + (1 - v) * 20, it.text, ts, C.cream, "start", 0, 600);
+				}
+			}
+			yy += row;
+		});
+	} else if (c.type === "compare") {
+		const gap = base * 0.9;
+		const cw = (w - gap) / 2;
+		const ch = Math.min(avail, base * 3.4);
+		c.items.forEach((it, i) => {
+			const v = visible(i);
+			if (v <= 0.01) return;
+			const cx = x + i * (cw + gap);
+			const dy = (1 - v) * 40;
+			el(
+				"rect",
+				{
+					x: r1(cx),
+					y: r1(yy + dy),
+					width: r1(cw),
+					height: r1(ch),
+					rx: r1(base * 0.4),
+					fill: i === 0 ? C.n2 : C.n3,
+				},
+				P,
+			);
+			const ls2 = fitSize(it.label, base * 0.9, cw - 30);
+			label(
+				P,
+				cx + cw / 2,
+				yy + dy + ch * (it.detail ? 0.45 : 0.55),
+				it.label,
+				ls2,
+				C.cream,
+				"middle",
+				-0.5,
+				700,
+			);
+			if (it.detail) {
+				const ds = fitSize(it.detail, base * 0.5, cw - 30, 600);
+				label(P, cx + cw / 2, yy + dy + ch * 0.72, it.detail, ds, C.sun, "middle", 0, 600);
+			}
+		});
+		const vs = Math.min(1, at(0.6)) * (1 - out);
+		if (vs > 0.01) {
+			const pw = base * 1.4 * vs;
+			const ph = base * 0.8 * vs;
+			el(
+				"rect",
+				{
+					x: r1(x + w / 2 - pw / 2),
+					y: r1(yy + ch / 2 - ph / 2),
+					width: r1(pw),
+					height: r1(ph),
+					rx: r1(ph / 2),
+					fill: C.sun,
+				},
+				P,
+			);
+			label(P, x + w / 2, yy + ch / 2 + ph * 0.25, "VS", ph * 0.6, C.night, "middle", 1, 700);
+		}
+	} else {
+		const max = Math.max(...c.bars.map((b) => b.value), 1e-9);
+		const row = Math.min(base * 1.55, avail / c.bars.length);
+		c.bars.forEach((bar, i) => {
+			const v = visible(i);
+			if (v > 0.01) {
+				const grow = eo(seg(k, 0.3 + i * 0.4, 1.1 + i * 0.4)) * (1 - out);
+				label(P, x, yy + row * 0.32, bar.label, row * 0.3, C.cream, "start", 0, 600);
+				const bh = row * 0.34;
+				const bw = Math.max(bh, (bar.value / max) * w * 0.72 * grow);
+				const top = bar.value === max;
+				el(
+					"rect",
+					{
+						x: r1(x),
+						y: r1(yy + row * 0.44),
+						width: r1(bw),
+						height: r1(bh),
+						rx: r1(bh / 2),
+						fill: top ? C.sun : C.blue,
+					},
+					P,
+				);
+				const shown = `${(bar.value * grow).toLocaleString("es-ES", { maximumFractionDigits: bar.value < 10 ? 1 : 0 })}${c.suffix ?? ""}`;
+				label(
+					P,
+					x + bw + 14,
+					yy + row * 0.44 + bh * 0.82,
+					shown,
+					bh * 0.95,
+					top ? C.sun : C.mist,
+					"start",
+					0,
+					700,
+				);
+			}
+			yy += row;
+		});
+	}
 }

@@ -18,9 +18,6 @@ export type StoryboardProps = {
 	mediaBaseUrl?: string;
 };
 
-/** Tipos de escena que los estilos visuales dibujan ellos mismos; los demás van encima, en placa. */
-const drawnByStage = (type: string) => type === "kinetic-text" || type === "stat";
-
 export const Storyboard = ({ storyboard, mediaBaseUrl }: StoryboardProps) => {
 	const { fps, style } = storyboard;
 	// Estilo visual: si tiene escenario, dibuja las escenas él y las escenas planas no se pintan.
@@ -43,7 +40,7 @@ export const Storyboard = ({ storyboard, mediaBaseUrl }: StoryboardProps) => {
 							{track.kind === "visual"
 								? track.clips.map((clip) => (
 										<Sequence key={clip.id} {...at(clip)} layout="none">
-											{stage && clip.type === "scene" && drawnByStage(clip.content.type) ? null : (
+											{stage && clip.type === "scene" && stage.draws(clip.content.type) ? null : (
 												<VisualClipView clip={clip} theme={style.theme} plate={Boolean(stage)} />
 											)}
 										</Sequence>
